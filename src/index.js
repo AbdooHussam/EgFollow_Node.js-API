@@ -7,8 +7,8 @@ const mongoSanitize = require("express-mongo-sanitize");
 var xss = require("xss-clean");
 require("./db/mongoose");
 require("./notification/InitFcmNotification");
-//const usersRouter = require("./routers/users_router");
-const loginRouter = require("./routers/login_router");
+const usersRouter = require("./routers/users_router");
+const loginRouter = require("./routers/login_controller");
 const notificationsRouter = require("./routers/notification_router");
 
 process.on("uncaughtException", (err) => {
@@ -36,9 +36,9 @@ app.use(mongoSanitize());
 app.use(xss());
 app.use(hpp());
 //----------------------------------------------------------------
-//app.use("/api/users", usersRouter);
+app.use("/api/users", usersRouter);
 app.use("/api/notifications", notificationsRouter);
-app.use("/api/login", loginRouter);
+//app.use("/api/login", loginRouter);
 
 //----------------------------------------------------------------
 

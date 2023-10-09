@@ -1,6 +1,5 @@
 const express = require("express");
 const { ObjectId, Double } = require("mongodb");
-const Login = require("../models/login_model");
 const {
   IgApiClient,
   IgLoginTwoFactorRequiredError,
@@ -126,6 +125,63 @@ router.get("/userInstaLogin2", async (req, res) => {
   }
 });
 
+exports.userInstaLogin2 = async (userName, userPass) => {
+  // Initiate Instagram API client
+  const ig = new IgApiClient();
+  // const userName = "abdoo_test";
+  // const userPass = "123456789BH";
+  ig.state.generateDevice(userName);
+  // Perform usual login
+  // If 2FA is enabled, IgLoginTwoFactorRequiredError will be thrown
+
+  let loggedInUser = await Bluebird.try(() =>
+    ig.account.login(userName, userPass)
+  )
+    .catch(IgLoginTwoFactorRequiredError, async (err) => {
+      const { username, totp_two_factor_on, two_factor_identifier } =
+        err.response.body.two_factor_info;
+      // decide which method to use
+      const verificationMethod = totp_two_factor_on ? "0" : "1"; // default to 1 for SMS
+      // At this point a code should have been sent
+      // Get the code
+      const { code } = await inquirer.prompt([
+        {
+          type: "input",
+          name: "code",
+          message: `Enter code received via ${
+            verificationMethod === "1" ? "SMS" : "TOTP"
+          }`,
+        },
+      ]);
+      // Use the code to finish the login process
+      return ig.account.twoFactorLogin({
+        username,
+        verificationCode: code,
+        twoFactorIdentifier: two_factor_identifier,
+        verificationMethod, // '1' = SMS (default), '0' = TOTP (google auth for example)
+        trustThisDevice: "1", // Can be omitted as '1' is used by default
+      });
+    })
+    .catch((e) => {
+      // console.log(e.message);
+      const parts = e.message.split(";");
+      const message = parts[1].trim();
+      console.error(
+        "An error occurred while processing two factor auth",
+        e,
+        e.stack
+      );
+      return { error: true, data: message };
+    });
+
+  return loggedInUser;
+
+  // res.send({
+  //   error: true,
+  //   loggedInUser,
+  // });
+};
+
 async function getAllItemsFromFeed(feed) {
   let items = [];
   do {
@@ -134,4 +190,4 @@ async function getAllItemsFromFeed(feed) {
   return items;
 }
 
-module.exports = router;
+//module.exports = router;

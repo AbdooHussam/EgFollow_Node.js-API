@@ -34,7 +34,7 @@ const notificationSchema = new mongoose.Schema(
 notificationSchema.plugin(uniqueValidator, { data: "Must be unique" });
 
 notificationSchema.pre(/^find/, function (next) {
-  this.populate({ path: "userAid", foreignField: "userAid" });
+  this.populate({ path: "userAid" });
 
   next();
 });
