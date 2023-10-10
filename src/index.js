@@ -6,9 +6,9 @@ var bodyParser = require("body-parser");
 const mongoSanitize = require("express-mongo-sanitize");
 var xss = require("xss-clean");
 require("./db/mongoose");
-require("./notification/InitFcmNotification");
+//require("./notification/InitFcmNotification");
 const usersRouter = require("./routers/users_router");
-const loginRouter = require("./routers/login_controller");
+//const loginRouter = require("./routers/login_controller");
 const notificationsRouter = require("./routers/notification_router");
 
 process.on("uncaughtException", (err) => {
