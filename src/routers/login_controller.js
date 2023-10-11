@@ -7,6 +7,7 @@ const {
 const { sample } = require("lodash");
 const inquirer = require("inquirer");
 const Bluebird = require("bluebird");
+const shttps = require("socks-proxy-agent");
 const router = new express.Router();
 
 //////////////////// Teeeeeeest ///////////////////////
@@ -125,14 +126,46 @@ router.get("/userInstaLogin2", async (req, res) => {
   }
 });
 
+///////////////////////////////////////////////////////////////////////////
+
+exports.userInstaLogin = async (userName, userPass) => {
+  try {
+    const ig = new IgApiClient();
+    // const userName = "abdoo.test2";
+    // const userPass = "123456789B";
+
+    ig.state.generateDevice(userName);
+
+    await ig.simulate.preLoginFlow();
+    const loggedInUser = await ig.account.login(userName, userPass);
+    ig.account.logout();
+    return loggedInUser;
+  } catch (e) {
+    const parts = e.message.split(";");
+    const message = parts[1].trim();
+    console.error(e);
+    return { error: true, data: message };
+  }
+};
+
 exports.userInstaLogin2 = async (userName, userPass) => {
   // Initiate Instagram API client
   const ig = new IgApiClient();
-  // const userName = "abdoo_test";
-  // const userPass = "123456789BH";
+  // const userName = "abdoo.test2";
+  // const userPass = "123456789B";
   ig.state.generateDevice(userName);
-  // Perform usual login
-  // If 2FA is enabled, IgLoginTwoFactorRequiredError will be thrown
+
+  //ig.request.defaults.agentClass = shttps; // apply agent class to request library defaults
+  // ig.request.defaults.agentOptions = {
+  //   // @ts-ignore
+  //   hostname: "127.0.0.1", // proxy hostname
+  //   port: 8000, // proxy port
+  //   protocol: "socks:", // supported: 'socks:' , 'socks4:' , 'socks4a:' , 'socks5:' , 'socks5h:'
+  //   //username: 'myProxyUser', // proxy username, optional
+  //   //password: 'myProxyPassword123', // proxy password, optional
+  // };
+
+  await ig.simulate.preLoginFlow();
 
   let loggedInUser = await Bluebird.try(() =>
     ig.account.login(userName, userPass)
@@ -173,13 +206,58 @@ exports.userInstaLogin2 = async (userName, userPass) => {
       );
       return { error: true, data: message };
     });
+  // await ig.simulate.postLoginFlow();
 
   return loggedInUser;
+  // return ig;
 
   // res.send({
   //   error: true,
   //   loggedInUser,
   // });
+};
+
+exports.addFriendship = async (userName, userPass, friendPk) => {
+  try {
+    const ig = new IgApiClient();
+    ig.state.generateDevice(userName);
+    await ig.simulate.preLoginFlow();
+    const loggedInUser = await ig.account.login(userName, userPass);
+
+    const friendship = await ig.friendship.create(friendPk);
+
+    ig.account.logout();
+    return friendship;
+  } catch (e) {
+    // const parts = e.message.split(";");
+    // const message = parts[1].trim();
+    console.error(e);
+    return { error: true, data: e.message };
+  }
+};
+
+exports.searchByUserName = async (userName, userPass, friendUserName) => {
+  try {
+    const ig = new IgApiClient();
+    // let search = await ig.user.info(friendUserName)
+
+    ig.state.generateDevice(userName);
+    await ig.simulate.preLoginFlow();
+    const loggedInUser = await ig.account.login(userName, userPass);
+
+    // let search = await ig.user.searchExact(friendUserName);
+    let search = await ig.user.usernameinfo(friendUserName);
+    // let search = await ig.user.search(friendUserName);
+
+    ig.account.logout();
+
+    return search;
+  } catch (e) {
+    // const parts = e.message.split(";");
+    // const message = parts[1].trim();
+    console.error(e);
+    return { error: true, data: e.message };
+  }
 };
 
 async function getAllItemsFromFeed(feed) {

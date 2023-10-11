@@ -13,57 +13,18 @@ const login_controller = require("./login_controller");
 var admin = require("firebase-admin");
 const { getMessaging } = require("firebase-admin/messaging");
 const Notifications = require("../models/notification_model");
-
-const userLogin = async (req, res, token) => {
-  try {
-    const username = req.body.username;
-    const password = req.body.password;
-    const loggedInUser = await login_controller.userInstaLogin2(
-      username,
-      password
-    );
-    let messageToken = req.body.messageToken;
-    // if (req.body.messageToken) {
-    //   user.messageToken = messageToken;
-    //   await user.save();
-
-    //   admin.messaging().subscribeToTopic(messageToken, "ALL");
-    //   const existingNotification = await Notifications.findOne({
-    //     userAid: user.userAid,
-    //   });
-
-    //   if (!existingNotification) {
-    //     const newNotification = new Notifications({
-    //       messageToken: user.messageToken,
-    //       userAid: user.userAid,
-    //     });
-    //     await newNotification.save();
-    //     const message = {
-    //       token: user.messageToken,
-    //       notification: {
-    //         title: "Welcome!",
-    //         body: `مرحبا بك ${user.name}`,
-    //       },
-    //     };
-    //     getMessaging().send(message);
-    //   }
-    // }
-    res.send({ error: false, data: loggedInUser, token, messageToken });
-  } catch (e) {
-    console.error(e);
-    res.status(400).send({ error: true, data: e.message });
-  }
-};
+const Users = require("../models/users_model");
 
 router.post("/userLogin", async (req, res) => {
   try {
     console.log(req.body);
     const username = req.body.username;
     const password = req.body.password;
-    const loggedInUser = await login_controller.userInstaLogin2(
+    const loggedInUser = await login_controller.userInstaLogin(
       username,
       password
     );
+    //return res.send(loggedInUser);
     if (loggedInUser.error == true) {
       return res.status(404).send(loggedInUser);
     }
@@ -141,11 +102,9 @@ router.post("/userLogin", async (req, res) => {
     let message = e.message;
     let emailVerified;
     if (message.toString().includes("Must be unique")) {
-      message = "المستخدم مسجل من قبل";
-      const user = await User.findOne({ email: req.body.email });
-      emailVerified = user.emailVerified;
+      message = "User already registered";
     }
-    res.status(400).send({ error: true, data: message, emailVerified });
+    res.status(400).send({ error: true, data: message });
   }
 });
 
@@ -248,7 +207,72 @@ router.get("/userSendMail/:userAid", async (req, res) => {
   }
 });
 
+router.post("/userFriend", async (req, res) => {
+  try {
+    console.log(req.body);
+    const userAid = req.body.userAid;
+    const friendPk = req.body.friendPk;
+
+    const user = await Users.findOne({ userAid });
+    if (!user) {
+      return res.status(404).send({ error: true, data: "not found" });
+    }
+    const response = await login_controller.addFriendship(
+      user.username,
+      user.password,
+      friendPk
+    );
+    //return res.send(loggedInUser);
+    if (response.error == true) {
+      return res.status(404).send(response);
+    }
+
+    res.send({ error: false, data: response });
+    console.log("/pooost user");
+  } catch (e) {
+    console.error(e);
+    let message = e.message;
+    // if (message.toString().includes("Must be unique")) {
+    //   message = "User already registered";
+    // }
+    res.status(400).send({ error: true, data: message });
+  }
+});
+
+router.post("/searchByUserName", async (req, res) => {
+  try {
+    console.log(req.body);
+    const userAid = req.body.userAid;
+    const userPk = req.body.userPk;
+    const user = await Users.findOne({ userAid });
+    if (!user) {
+      return res.status(404).send({ error: true, data: "not found" });
+    }
+    const response = await login_controller.searchByUserName(
+      user.username,
+      user.password,
+      userPk
+    );
+    //return res.send(loggedInUser);
+    if (response.error == true) {
+      return res.status(404).send(response);
+    }
+
+    res.send({ error: false, data: response });
+    console.log("/pooost user");
+  } catch (e) {
+    console.error(e);
+    let message = e.message;
+    // if (message.toString().includes("Must be unique")) {
+    //   message = "User already registered";
+    // }
+    res.status(400).send({ error: true, data: message });
+  }
+});
+
 /////////////////////////// Teeeest //////////////////////////
+
+////////////////////////////////////////////////////////////
 
 router.get("/userInsta", async (req, res) => {
   try {
@@ -306,8 +330,6 @@ router.get("/userInsta", async (req, res) => {
     res.status(500).send({ error: true, data: e.message });
   }
 });
-
-////////////////////////////////////////////////////////////
 
 router.get("/userInstaLogin2", async (req, res) => {
   try {
