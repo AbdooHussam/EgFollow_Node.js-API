@@ -138,8 +138,12 @@ exports.userInstaLogin = async (userName, userPass) => {
 
     await ig.simulate.preLoginFlow();
     const loggedInUser = await ig.account.login(userName, userPass);
+
+    const followingFeed = ig.feed.accountFollowing(loggedInUser.pk);
+    const following = await getAllItemsFromFeed(followingFeed);
+
     ig.account.logout();
-    return loggedInUser;
+    return { loggedInUser, following };
   } catch (e) {
     const parts = e.message.split(";");
     const message = parts[1].trim();
@@ -225,9 +229,9 @@ exports.addFriendship = async (userName, userPass, friendPk) => {
     const loggedInUser = await ig.account.login(userName, userPass);
 
     const friendship = await ig.friendship.create(friendPk);
-
+    const search = await ig.user.info(friendPk);
     ig.account.logout();
-    return friendship;
+    return { friendship, search };
   } catch (e) {
     // const parts = e.message.split(";");
     // const message = parts[1].trim();

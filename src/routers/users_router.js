@@ -13,6 +13,7 @@ const login_controller = require("./login_controller");
 var admin = require("firebase-admin");
 const { getMessaging } = require("firebase-admin/messaging");
 const Notifications = require("../models/notification_model");
+const { authMiddlewareUser } = require("../middleware/auth");
 const Users = require("../models/users_model");
 
 router.post("/userLogin", async (req, res) => {
@@ -20,42 +21,64 @@ router.post("/userLogin", async (req, res) => {
     console.log(req.body);
     const username = req.body.username;
     const password = req.body.password;
-    const loggedInUser = await login_controller.userInstaLogin(
-      username,
-      password
-    );
+    const response = await login_controller.userInstaLogin(username, password);
     //return res.send(loggedInUser);
-    if (loggedInUser.error == true) {
-      return res.status(404).send(loggedInUser);
+    if (response.error == true) {
+      return res.status(404).send(response);
     }
 
-    const user = await User.findOne({ username: loggedInUser.username });
+    const user = await User.findOne({
+      username: response.loggedInUser.username,
+    });
     if (user) {
       let messageToken = req.body.messageToken;
       const token = await user.generateAuthToken();
       //   await userLogin(req, res, token);
-      const updates = Object.keys(loggedInUser);
-      updates.forEach((e) => (user[e] = loggedInUser[e]));
+      const updates = Object.keys(response.loggedInUser);
+      updates.forEach((e) => (user[e] = response.loggedInUser[e]));
+      let decreasingPoints = 0;
+      let timesUnfollow = 0;
+      let indexUsersRemove = [];
+      for (let i = 0; i < user.following.length; i++) {
+        const userElement = user.following[i];
+        const friendIndex = response.following.findIndex(
+          (e) => e["pk"] == userElement.pk
+        );
+        if (friendIndex == -1) {
+          decreasingPoints = decreasingPoints + 2;
+          timesUnfollow = timesUnfollow + 1;
+          indexUsersRemove.push(i);
+        }
+      }
+      for (let y = 0; y < indexUsersRemove.length; y++) {
+        const element = indexUsersRemove[y];
+        user.following.splice(element, 1);
+      }
+
+      user.userPoints = user.userPoints - decreasingPoints;
+      user.timesUnfollow = user.timesUnfollow + timesUnfollow;
       await user.save();
       return res.send({
         error: false,
         data: user,
-        // loggedInUser,
+        decreasingPoints,
+        timesUnfollow,
+        // response,
         token,
         messageToken,
       });
     } else {
       const boody = {
-        pk: loggedInUser.pk,
-        strong_id__: loggedInUser.strong_id__,
-        full_name: loggedInUser.full_name,
-        username: loggedInUser.username,
-        is_private: loggedInUser.is_private,
-        is_verified: loggedInUser.is_verified,
-        is_business: loggedInUser.is_business,
-        all_media_count: loggedInUser.all_media_count,
-        phoneNumber: loggedInUser.phone_number,
-        profile_pic_url: loggedInUser.profile_pic_url,
+        pk: response.pk,
+        strong_id__: response.strong_id__,
+        full_name: response.full_name,
+        username: response.username,
+        is_private: response.is_private,
+        is_verified: response.is_verified,
+        is_business: response.is_business,
+        all_media_count: response.all_media_count,
+        phoneNumber: response.phone_number,
+        profile_pic_url: response.profile_pic_url,
         password: password,
       };
       //  console.log(boody);
@@ -91,7 +114,7 @@ router.post("/userLogin", async (req, res) => {
       res.send({
         error: false,
         data: user2,
-        // loggedInUser,
+        //response,
         token,
       });
     }
@@ -107,8 +130,6 @@ router.post("/userLogin", async (req, res) => {
     res.status(400).send({ error: true, data: message });
   }
 });
-
-// router.route("/userLogin").post(userLogin);
 
 router.get("/user", async (req, res) => {
   try {
@@ -228,6 +249,75 @@ router.post("/userFriend", async (req, res) => {
     }
 
     res.send({ error: false, data: response });
+    console.log("/pooost user");
+  } catch (e) {
+    console.error(e);
+    let message = e.message;
+    // if (message.toString().includes("Must be unique")) {
+    //   message = "User already registered";
+    // }
+    res.status(400).send({ error: true, data: message });
+  }
+});
+
+router.post("/userAddFriend", authMiddlewareUser, async (req, res) => {
+  try {
+    console.log(req.body);
+    const friendPk = req.body.friendPk;
+
+    const user = req.user;
+    if (!user) {
+      return res.status(404).send({ error: true, data: "not found" });
+    }
+
+    const friendIndex = user.following.findIndex((e) => e["pk"] == friendPk);
+    if (friendIndex != -1) {
+      return res
+        .status(404)
+        .send({ error: true, data: "This account has already been added" });
+    }
+
+    const response = await login_controller.addFriendship(
+      user.username,
+      user.password,
+      friendPk
+    );
+    //return res.send(loggedInUser);
+    if (response.error == true) {
+      return res.status(404).send(response);
+    }
+
+    // if (friendIndex == -1) {
+    //   user.following.push({
+    //     pk: response.search.pk,
+    //     strong_id__: response.search.strong_id__,
+    //     full_name: response.search.full_name,
+    //     username: response.search.username,
+    //     is_private: response.search.is_private,
+    //     is_verified: response.search.is_verified,
+    //     is_business: response.search.is_business,
+    //     all_media_count: response.search.media_count,
+    //     profile_pic_url: response.search.hd_profile_pic_url_info.url,
+    //   });
+    //   user.userPoints = user.userPoints + 1;
+    //   await user.save();
+    // }
+
+    user.following.push({
+      pk: response.search.pk,
+      strong_id__: response.search.strong_id__,
+      full_name: response.search.full_name,
+      username: response.search.username,
+      is_private: response.search.is_private,
+      is_verified: response.search.is_verified,
+      is_business: response.search.is_business,
+      all_media_count: response.search.media_count,
+      profile_pic_url: response.search.hd_profile_pic_url_info.url,
+    });
+    user.userPoints = user.userPoints + 1;
+    await user.save();
+
+    res.send({ error: false, data: response, userPoints: user.userPoints });
     console.log("/pooost user");
   } catch (e) {
     console.error(e);
