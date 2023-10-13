@@ -22,13 +22,13 @@ router.post("/userLogin", async (req, res) => {
     const username = req.body.username;
     const password = req.body.password;
     const response = await login_controller.userInstaLogin(username, password);
-    //return res.send(loggedInUser);
+    // return res.send(response);
     if (response.error == true) {
       return res.status(404).send(response);
     }
 
     const user = await User.findOne({
-      username: response.loggedInUser.username,
+      pk: response.loggedInUser.pk,
     });
     if (user) {
       let messageToken = req.body.messageToken;

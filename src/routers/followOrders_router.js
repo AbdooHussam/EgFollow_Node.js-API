@@ -21,25 +21,45 @@ router.post("/newFollowOrder", authMiddlewareUser, async (req, res) => {
       user.password,
       orderUserName
     );
-    const boody = {
-      followTo: {
-        pk: response.pk,
-        strong_id__: response.strong_id__,
-        full_name: response.full_name,
-        username: response.username,
-        is_private: response.is_private,
-        is_verified: response.is_verified,
-        is_business: response.is_business,
-        all_media_count: response.media_count,
-        profile_pic_url: response.hd_profile_pic_url_info.url,
-      },
+
+    const followOrder1 = await FollowOrders.findOne({
       followFrom: userAid,
-      paidPoints: paidPoints,
-      targetFollowers: targetFollowers,
-    };
-    const followOrder = new FollowOrders(boody);
-    await followOrder.save();
-    res.send({ error: false, data: followOrder });
+      "followTo.pk": response.pk,
+    });
+    if (followOrder1) {
+      if (user.userPoints >= paidPoints) {
+        user.userPoints = user.userPoints - paidPoints;
+        await user.save();
+      } else {
+        return res
+          .status(404)
+          .send({ error: true, data: "Your Points not enough" });
+      }
+      followOrder1.targetFollowers =
+        followOrder1.targetFollowers + targetFollowers;
+      followOrder1.paidPoints = followOrder1.paidPoints + paidPoints;
+    } else {
+      const boody = {
+        followTo: {
+          pk: response.pk,
+          strong_id__: response.strong_id__,
+          full_name: response.full_name,
+          username: response.username,
+          is_private: response.is_private,
+          is_verified: response.is_verified,
+          is_business: response.is_business,
+          all_media_count: response.media_count,
+          profile_pic_url: response.hd_profile_pic_url_info.url,
+        },
+        followFrom: userAid,
+        paidPoints: paidPoints,
+        targetFollowers: targetFollowers,
+      };
+      const followOrder = new FollowOrders(boody);
+      await followOrder.save();
+      return res.send({ error: false, data: followOrder });
+    }
+
     console.log("/pooost followOrder");
   } catch (e) {
     console.error(e);
@@ -71,21 +91,23 @@ router.get("/followOrders", async (req, res) => {
   }
 });
 
-router.get("/followOrdersRandom", async (req, res) => {
+router.get("/followOrdersRandom", authMiddlewareUser, async (req, res) => {
   try {
+    const user = req.user;
     const followOrder = await FollowOrders.aggregate([
       { $sample: { size: 1000 } }, // تعديل الحجم حسب عدد النتائج التي ترغب فيها
     ]);
-    //.sort({ followOrderAid: 1 });
-    // if (followOrder.length == 0) {
-    //   return res
-    //     .status(400)
-    //     .send({ error: true, data: "لا يوجد غرف مسجلة بعد" });
-    // }
-    // for (let i = 0; i < followOrder.length; i++) {
-    //   const element = followOrder[i];
-    //   followOrder[i].users = [];
-    // }
+    console.log(followOrder.length);
+    for (let i = 0; i < user.following.length; i++) {
+      const userElement = user.following[i];
+      const friendIndex = followOrder.findIndex(
+        (e) => e.followTo.pk == userElement.pk
+      );
+      if (friendIndex != -1) {
+        followOrder.splice(friendIndex, 1);
+      }
+    }
+    console.log(followOrder.length);
     res.send({ error: false, data: followOrder });
     console.log("/get all followOrdersRandom");
   } catch (e) {
