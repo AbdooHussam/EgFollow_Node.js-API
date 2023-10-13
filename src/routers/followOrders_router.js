@@ -3,15 +3,16 @@ const { ObjectId, Double } = require("mongodb");
 const FollowOrders = require("../models/followOrders_model");
 const Users = require("../models/users_model");
 const login_controller = require("./login_controller");
+const { authMiddlewareUser } = require("../middleware/auth");
 const router = new express.Router();
 
-router.post("/newFollowOrder", async (req, res) => {
+router.post("/newFollowOrder", authMiddlewareUser, async (req, res) => {
   try {
-    const userAid = req.body.userAid;
     const paidPoints = req.body.paidPoints;
     const targetFollowers = req.body.targetFollowers;
     const orderUserName = req.body.orderUserName;
-    const user = await Users.findOne({ userAid });
+    const user = req.user;
+    const userAid = user.userAid;
     if (!user) {
       return res.status(404).send({ error: true, data: "not found" });
     }
