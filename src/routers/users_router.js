@@ -274,7 +274,7 @@ router.post("/userAddFriend", authMiddlewareUser, async (req, res) => {
     if (friendIndex != -1) {
       return res
         .status(404)
-        .send({ error: false, data: "This account has already been added" });
+        .send({ error: true, data: "This account has already been added" });
     }
 
     const response = await login_controller.addFriendship(
