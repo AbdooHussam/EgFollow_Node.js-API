@@ -8,7 +8,7 @@ var xss = require("xss-clean");
 require("./db/mongoose");
 //require("./notification/InitFcmNotification");
 //const loginRouter = require("./routers/login_controller");
-const notificationsRouter = require("./routers/notification_router");
+//const notificationsRouter = require("./routers/notification_router");
 const usersRouter = require("./routers/users_router");
 const followOrdersRouter = require("./routers/followOrders_router");
 
@@ -39,7 +39,7 @@ app.use(hpp());
 //----------------------------------------------------------------
 app.use("/api/users", usersRouter);
 app.use("/api/followOrders", followOrdersRouter);
-app.use("/api/notifications", notificationsRouter);
+//app.use("/api/notifications", notificationsRouter);
 //app.use("/api/login", loginRouter);
 
 //----------------------------------------------------------------
