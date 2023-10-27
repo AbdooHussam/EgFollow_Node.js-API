@@ -18,6 +18,7 @@ const usersSchema = new mongoose.Schema(
     is_verified: { type: Boolean, trim: true, default: false },
     is_business: { type: Boolean, trim: true, default: false },
     all_media_count: { type: Number, trim: true, default: 0 },
+    session: { type: Object, default: {} },
     userPoints: { type: Number, trim: true, default: 0 },
     timesUnfollow: { type: Number, trim: true, default: 0 },
     following: [

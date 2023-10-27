@@ -7,138 +7,24 @@ const {
 const { sample } = require("lodash");
 const inquirer = require("inquirer");
 const Bluebird = require("bluebird");
-const User = require("../models/users_model");
+const Users = require("../models/users_model");
 const router = new express.Router();
-const login_controller = require("./login_controller");
+const login_controller = require("../Controllers/login_controller");
 var admin = require("firebase-admin");
 const { getMessaging } = require("firebase-admin/messaging");
 const Notifications = require("../models/notification_model");
 const { authMiddlewareUser } = require("../middleware/auth");
-const Users = require("../models/users_model");
 
-router.post("/userLogin", async (req, res) => {
-  try {
-    console.log(req.body);
-    const username = req.body.username;
-    const password = req.body.password;
-    const response = await login_controller.userInstaLogin(username, password);
-    // return res.send(response);
-    if (response.error == true) {
-      return res.status(404).send(response);
-    }
-
-    const user = await User.findOne({
-      pk: response.loggedInUser.pk,
-    });
-    if (user) {
-      let messageToken = req.body.messageToken;
-      const token = await user.generateAuthToken();
-      //   await userLogin(req, res, token);
-      const updates = Object.keys(response.loggedInUser);
-      updates.forEach((e) => (user[e] = response.loggedInUser[e]));
-      let decreasingPoints = 0;
-      let timesUnfollow = 0;
-      let indexUsersRemove = [];
-      for (let i = 0; i < user.following.length; i++) {
-        const userElement = user.following[i];
-        const friendIndex = response.following.findIndex(
-          (e) => e["pk"] == userElement.pk
-        );
-        if (friendIndex == -1) {
-          decreasingPoints = decreasingPoints + 2;
-          timesUnfollow = timesUnfollow + 1;
-          indexUsersRemove.push(i);
-        }
-      }
-      for (let y = 0; y < indexUsersRemove.length; y++) {
-        const element = indexUsersRemove[y];
-        user.following.splice(element, 1);
-      }
-
-      user.userPoints = user.userPoints - decreasingPoints;
-      user.timesUnfollow = user.timesUnfollow + timesUnfollow;
-      await user.save();
-      return res.send({
-        error: false,
-        data: user,
-        decreasingPoints,
-        timesUnfollow,
-        // response,
-        token,
-        messageToken,
-      });
-    } else {
-      const boody = {
-        pk: response.pk,
-        strong_id__: response.strong_id__,
-        full_name: response.full_name,
-        username: response.username,
-        is_private: response.is_private,
-        is_verified: response.is_verified,
-        is_business: response.is_business,
-        all_media_count: response.all_media_count,
-        phoneNumber: response.phone_number,
-        profile_pic_url: response.profile_pic_url,
-        password: password,
-      };
-      //  console.log(boody);
-      const user2 = new User(boody);
-      await user2.save();
-      const token = await user2.generateAuthToken();
-      let messageToken = req.body.messageToken;
-      //   if (req.body.messageToken) {
-      //     user2.messageToken = messageToken;
-      //     await user2.save();
-
-      //     admin.messaging().subscribeToTopic(messageToken, "all");
-      //     const existingNotification = await Notifications.findOne({
-      //       userAid: user2.userAid,
-      //     });
-
-      //     if (!existingNotification) {
-      //       const newNotification = new Notifications({
-      //         messageToken: user2.messageToken,
-      //         userAid: user2.userAid,
-      //       });
-      //       await newNotification.save();
-      //       const message = {
-      //         token: user2.messageToken,
-      //         notification: {
-      //           title: "Welcome!",
-      //           body: `مرحبا بك ${user2.name}`,
-      //         },
-      //       };
-      //       getMessaging().send(message);
-      //     }
-      //   }
-      res.send({
-        error: false,
-        data: user2,
-        //response,
-        token,
-      });
-    }
-
-    console.log("/pooost user");
-  } catch (e) {
-    console.error(e);
-    let message = e.message;
-    let emailVerified;
-    if (message.toString().includes("Must be unique")) {
-      message = "User already registered";
-    }
-    res.status(400).send({ error: true, data: message });
-  }
-});
+router.post("/userLogin", login_controller.loginApi);
 
 router.get("/user", async (req, res) => {
   try {
     let user;
     let param = req.query;
     if (param) {
-      user = await User.find(param);
+      user = await Users.find(param);
     } else {
-      user = await User.find({});
+      user = await Users.find({});
     }
 
     res.send({ error: false, data: user });
@@ -173,7 +59,7 @@ router.patch("/user/:userAid", async (req, res) => {
       });
     }
     // if use middlware
-    const user = await User.findOne({
+    const user = await Users.findOne({
       $or: [{ userAid: _id }, { _id: objId }],
     });
     if (!user) {
@@ -194,7 +80,7 @@ router.get("/user/:userAid", async (req, res) => {
   try {
     const _id = req.params.userAid;
     var objId = new ObjectId(_id.length < 12 ? "123456789012" : _id);
-    const user = await User.findOne({
+    const user = await Users.findOne({
       $or: [{ userAid: _id }, { _id: objId }],
     });
 
@@ -210,7 +96,7 @@ router.get("/userSendMail/:userAid", async (req, res) => {
   try {
     const _id = req.params.userAid;
     var objId = new ObjectId(_id.length < 12 ? "123456789012" : _id);
-    const user = await User.findOne({
+    const user = await Users.findOne({
       $or: [{ userAid: _id }, { _id: objId }],
     });
 
@@ -254,7 +140,7 @@ router.post("/userFriend", async (req, res) => {
     console.error(e);
     let message = e.message;
     // if (message.toString().includes("Must be unique")) {
-    //   message = "User already registered";
+    //   message = "Users already registered";
     // }
     res.status(400).send({ error: true, data: message });
   }
@@ -265,29 +151,33 @@ router.post("/userAddFriend", authMiddlewareUser, async (req, res) => {
     console.log(req.body);
     const friendPk = req.body.friendPk;
 
-    const user = req.user;
+    let user = req.user;
     if (!user) {
       return res.status(404).send({ error: true, data: "not found" });
     }
 
     const friendIndex = user.following.findIndex((e) => e["pk"] == friendPk);
     if (friendIndex != -1) {
-      return res
-        .status(404)
-        .send({
-          error: true,
-          data: `${user.following[friendIndex].username} has already been added`,
-        });
+      return res.status(404).send({
+        error: true,
+        data: `${user.following[friendIndex].username} has already been added`,
+      });
     }
-
-    const response = await login_controller.addFriendship(
-      user.username,
-      user.password,
-      friendPk
-    );
-    //return res.send(loggedInUser);
+    let response;
+    response = await login_controller.addFriendship(user, friendPk);
+    console.log(response.error);
     if (response.error == true) {
-      return res.status(404).send(response);
+      req.body.username = user.username;
+      req.body.password = user.password;
+      await login_controller.loginApi(req, res, false);
+
+      user = await Users.findOne({ pk: user.pk });
+      if (user) {
+        response = await login_controller.addFriendship(user, friendPk);
+        if (response.error == true) {
+          return res.status(404).send({ error: true, data: response });
+        }
+      }
     }
 
     // if (friendIndex == -1) {
@@ -321,13 +211,10 @@ router.post("/userAddFriend", authMiddlewareUser, async (req, res) => {
     await user.save();
 
     res.send({ error: false, data: response, userPoints: user.userPoints });
-    console.log("/pooost user");
+    console.log("/userAddFriend");
   } catch (e) {
     console.error(e);
     let message = e.message;
-    // if (message.toString().includes("Must be unique")) {
-    //   message = "User already registered";
-    // }
     res.status(400).send({ error: true, data: message });
   }
 });
@@ -337,18 +224,25 @@ router.post("/searchByUserName", async (req, res) => {
     console.log(req.body);
     const userAid = req.body.userAid;
     const userPk = req.body.userPk;
-    const user = await Users.findOne({ userAid });
+    let user = await Users.findOne({ userAid });
     if (!user) {
       return res.status(404).send({ error: true, data: "not found" });
     }
-    const response = await login_controller.searchByUserName(
-      user.username,
-      user.password,
-      userPk
-    );
+    let response = await login_controller.searchByUserName(user, userPk);
     //return res.send(loggedInUser);
+    console.log(response.error);
     if (response.error == true) {
-      return res.status(404).send(response);
+      req.body.username = user.username;
+      req.body.password = user.password;
+      await login_controller.loginApi(req, res, false);
+
+      user = await Users.findOne({ pk: user.pk });
+      if (user) {
+        response = await login_controller.searchByUserName(user, userPk);
+        if (response.error == true) {
+          return res.status(404).send({ error: true, data: response });
+        }
+      }
     }
 
     res.send({ error: false, data: response });
@@ -357,7 +251,7 @@ router.post("/searchByUserName", async (req, res) => {
     console.error(e);
     let message = e.message;
     // if (message.toString().includes("Must be unique")) {
-    //   message = "User already registered";
+    //   message = "Users already registered";
     // }
     res.status(400).send({ error: true, data: message });
   }

@@ -1,8 +1,9 @@
 const express = require("express");
+
 const { ObjectId, Double } = require("mongodb");
 const FollowOrders = require("../models/followOrders_model");
 const Users = require("../models/users_model");
-const login_controller = require("./login_controller");
+const login_controller = require("../Controllers/login_controller");
 const { authMiddlewareUser } = require("../middleware/auth");
 const router = new express.Router();
 
@@ -11,17 +12,26 @@ router.post("/newFollowOrder", authMiddlewareUser, async (req, res) => {
     const paidPoints = req.body.paidPoints;
     const targetFollowers = req.body.targetFollowers;
     const orderUserName = req.body.orderUserName;
-    const user = req.user;
+    let user = req.user;
     const userAid = user.userAid;
     if (!user) {
       return res.status(404).send({ error: true, data: "not found" });
     }
-    const response = await login_controller.searchByUserName(
-      user.username,
-      user.password,
-      orderUserName
-    );
+    let response = await login_controller.searchByUserName(user, orderUserName);
+    console.log(response.error);
+    if (response.error == true) {
+      req.body.username = user.username;
+      req.body.password = user.password;
+      await login_controller.loginApi(req, res, false);
 
+      user = await Users.findOne({ pk: user.pk });
+      if (user) {
+        response = await login_controller.searchByUserName(user, orderUserName);
+        if (response.error == true) {
+          return res.status(404).send({ error: true, data: response });
+        }
+      }
+    }
     const followOrder1 = await FollowOrders.findOne({
       followFrom: userAid,
       "followTo.pk": response.pk,

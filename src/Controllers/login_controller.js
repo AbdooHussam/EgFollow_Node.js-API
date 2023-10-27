@@ -1,5 +1,6 @@
 const express = require("express");
 const { ObjectId, Double } = require("mongodb");
+const fs = require("fs");
 const {
   IgApiClient,
   IgLoginTwoFactorRequiredError,
@@ -7,6 +8,7 @@ const {
 const { sample } = require("lodash");
 const inquirer = require("inquirer");
 const Bluebird = require("bluebird");
+const Users = require("../models/users_model");
 const shttps = require("socks-proxy-agent");
 const router = new express.Router();
 
@@ -128,6 +130,32 @@ router.get("/userInstaLogin2", async (req, res) => {
 
 ///////////////////////////////////////////////////////////////////////////
 
+exports.userInstaGetStateLogin = async (userName, userPass) => {
+  try {
+    const ig = new IgApiClient();
+
+    const user = await Users.findOne({
+      username: userName,
+    });
+    if (!user) {
+      return exports.userInstaLogin(userName, userPass);
+    }
+    const serialized = user.session;
+    await ig.state.deserialize(serialized);
+    const loggedInUser = await ig.user.usernameinfo(userName);
+
+    const followingFeed = ig.feed.accountFollowing(user.pk);
+    const following = await getAllItemsFromFeed(followingFeed);
+
+    // return { error: true, data: loggedInUser };
+    return { loggedInUser, following, serialized };
+  } catch (e) {
+    console.error(e);
+    //  return { error: true, data: e.message };
+    return exports.userInstaLogin(userName, userPass);
+  }
+};
+
 exports.userInstaLogin = async (userName, userPass) => {
   try {
     const ig = new IgApiClient();
@@ -136,14 +164,28 @@ exports.userInstaLogin = async (userName, userPass) => {
 
     ig.state.generateDevice(userName);
 
-    await ig.simulate.preLoginFlow();
+    // ig.request.defaults.agentClass = shttps; // apply agent class to request library defaults
+    // ig.request.defaults.agentOptions = {
+    //   // @ts-ignore
+    //   hostname: '210.211.122.40', // proxy hostname
+    //   port: 42669, // proxy port
+    //   protocol: 'socks4:', // supported: 'socks:' , 'socks4:' , 'socks4a:' , 'socks5:' , 'socks5h:'
+    //   //username: 'myProxyUser', // proxy username, optional
+    //   //password: 'myProxyPassword123', // proxy password, optional
+    // };
+
+    // await ig.simulate.preLoginFlow();
     const loggedInUser = await ig.account.login(userName, userPass);
+    // حفظ جلسة الحساب في ملف
+    const serialized = await ig.state.serialize();
+    //console.log(serialized);
+    // fs.writeFileSync('session1.json', JSON.stringify(serialized));
 
     const followingFeed = ig.feed.accountFollowing(loggedInUser.pk);
     const following = await getAllItemsFromFeed(followingFeed);
 
-    ig.account.logout();
-    return { loggedInUser, following };
+    //ig.account.logout();
+    return { loggedInUser, following, serialized };
   } catch (e) {
     const parts = e.message.split(";");
     const message = parts[1].trim();
@@ -221,16 +263,19 @@ exports.userInstaLogin2 = async (userName, userPass) => {
   // });
 };
 
-exports.addFriendship = async (userName, userPass, friendPk) => {
+exports.addFriendship = async (user, friendPk) => {
   try {
     const ig = new IgApiClient();
-    ig.state.generateDevice(userName);
-    await ig.simulate.preLoginFlow();
-    const loggedInUser = await ig.account.login(userName, userPass);
+    // ig.state.generateDevice(user.username);
+    // await ig.simulate.preLoginFlow();
+    // const loggedInUser = await ig.account.login(user.userName, user.password);
+    // const user = await Users.findOne({pk: user.pk});
+    const serialized = user.session;
+    await ig.state.deserialize(serialized);
 
     const friendship = await ig.friendship.create(friendPk);
     const search = await ig.user.info(friendPk);
-    ig.account.logout();
+    // ig.account.logout();
     return { friendship, search };
   } catch (e) {
     // const parts = e.message.split(";");
@@ -240,20 +285,19 @@ exports.addFriendship = async (userName, userPass, friendPk) => {
   }
 };
 
-exports.searchByUserName = async (userName, userPass, friendUserName) => {
+exports.searchByUserName = async (user, friendUserName) => {
   try {
     const ig = new IgApiClient();
     // let search = await ig.user.info(friendUserName)
 
-    ig.state.generateDevice(userName);
-    await ig.simulate.preLoginFlow();
-    const loggedInUser = await ig.account.login(userName, userPass);
+    const serialized = user.session;
+    await ig.state.deserialize(serialized);
 
     // let search = await ig.user.searchExact(friendUserName);
     let search = await ig.user.usernameinfo(friendUserName);
     // let search = await ig.user.search(friendUserName);
 
-    ig.account.logout();
+    // ig.account.logout();
 
     return search;
   } catch (e) {
@@ -271,5 +315,106 @@ async function getAllItemsFromFeed(feed) {
   } while (feed.isMoreAvailable());
   return items;
 }
+
+////////////////////////// API ///////////////////////////////////////
+
+exports.loginApi = async (req, res, isReturn = true) => {
+  try {
+    console.log(req.body);
+    const username = req.body.username;
+    const password = req.body.password;
+    const response = await exports.userInstaGetStateLogin(username, password);
+    // return res.send(response);
+    if (response.error == true && isReturn) {
+      return res.status(404).send(response);
+    }
+
+    const user = await Users.findOne({
+      pk: response.loggedInUser.pk,
+    });
+    let decreasingPoints = 0;
+    let timesUnfollow = 0;
+    if (user) {
+      let messageToken = req.body.messageToken;
+      const token = await user.generateAuthToken();
+      //   await userLogin(req, res, token);
+      const updates = Object.keys(response.loggedInUser);
+      updates.forEach((e) => (user[e] = response.loggedInUser[e]));
+      let indexUsersRemove = [];
+      for (let i = 0; i < user.following.length; i++) {
+        const userElement = user.following[i];
+        const friendIndex = response.following.findIndex(
+          (e) => e["pk"] == userElement.pk
+        );
+        if (friendIndex == -1) {
+          decreasingPoints = decreasingPoints + 2;
+          timesUnfollow = timesUnfollow + 1;
+          indexUsersRemove.push(i);
+        }
+      }
+      for (let y = 0; y < indexUsersRemove.length; y++) {
+        const element = indexUsersRemove[y];
+        user.following.splice(element, 1);
+      }
+
+      user.userPoints = user.userPoints - decreasingPoints;
+      user.timesUnfollow = user.timesUnfollow + timesUnfollow;
+      (user.session = response.serialized), await user.save();
+      if (isReturn) {
+        return res.send({
+          error: false,
+          data: user,
+          decreasingPoints,
+          timesUnfollow,
+          token,
+          // response,
+          // messageToken,
+        });
+      }
+    } else {
+      const boody = {
+        pk: response.loggedInUser.pk,
+        strong_id__: response.loggedInUser.strong_id__,
+        full_name: response.loggedInUser.full_name,
+        username: response.loggedInUser.username,
+        is_private: response.loggedInUser.is_private,
+        is_verified: response.loggedInUser.is_verified,
+        is_business: response.loggedInUser.is_business,
+        all_media_count: response.loggedInUser.all_media_count,
+        phoneNumber: response.loggedInUser.phone_number,
+        profile_pic_url: response.loggedInUser.profile_pic_url,
+        password: password,
+        session: response.serialized,
+      };
+      //  console.log(boody);
+      const user2 = new Users(boody);
+      await user2.save();
+      const token = await user2.generateAuthToken();
+      let messageToken = req.body.messageToken;
+      if (isReturn) {
+        res.send({
+          error: false,
+          data: user2,
+          decreasingPoints,
+          timesUnfollow,
+          token,
+          //response,
+        });
+      }
+    }
+
+    console.log("/pooost user");
+  } catch (e) {
+    console.error(e);
+    let message = e.message;
+    let emailVerified;
+    if (message.toString().includes("Must be unique")) {
+      message = "Users already registered";
+    }
+    if (isReturn) {
+      res.status(400).send({ error: true, data: message });
+    }
+  }
+};
 
 //module.exports = router;
