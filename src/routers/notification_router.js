@@ -49,7 +49,7 @@ router.post("/notification", async (req, res) => {
     }
   } catch (e) {
     console.error(e);
-    res.status(400).send({ error: true, data: e.message });
+    res.status(450).send({ error: true, data: e.message });
   }
 });
 
@@ -61,7 +61,7 @@ router.get("/notification", async (req, res) => {
     console.log("/get all notification");
   } catch (e) {
     console.error({ error: true, data: e.message });
-    res.status(400).send({ error: true, data: e.message });
+    res.status(450).send({ error: true, data: e.message });
   }
 });
 
@@ -93,7 +93,7 @@ router.post("/sendNotification", async (req, res) => {
     return res.send({ error: false, data: data });
   } catch (e) {
     console.error(e);
-    res.status(500).send({ error: true, data: e.message });
+    res.status(450).send({ error: true, data: e.message });
   }
 });
 
@@ -108,7 +108,7 @@ router.post("/sendNotificationTopic", async (req, res) => {
     return res.send({ error: false, data: data });
   } catch (e) {
     console.error(e);
-    res.status(500).send({ error: true, data: e.message });
+    res.status(450).send({ error: true, data: e.message });
   }
 });
 
@@ -125,7 +125,7 @@ router.get("/myNotification/:userAid", async (req, res) => {
     console.log("/get Notifications By user Id");
   } catch (e) {
     console.error(e);
-    res.status(500).send({ error: true, data: e.message });
+    res.status(450).send({ error: true, data: e.message });
   }
 });
 

@@ -68,7 +68,7 @@ router.get("/userInsta", async (req, res) => {
     });
   } catch (e) {
     console.error(e);
-    res.status(500).send({ error: true, data: e.message });
+    res.status(450).send({ error: true, data: e.message });
   }
 });
 
@@ -125,7 +125,7 @@ router.get("/userInstaLogin2", async (req, res) => {
     });
   } catch (e) {
     console.error(e);
-    res.status(500).send({ error: true, data: e.message });
+    res.status(450).send({ error: true, data: e.message });
   }
 });
 

@@ -35,7 +35,7 @@ router.get("/user", async (req, res) => {
     console.log("/get all user");
   } catch (e) {
     console.error({ error: true, data: e.message });
-    res.status(400).send({ error: true, data: e.message });
+    res.status(450).send({ error: true, data: e.message });
   }
 });
 
@@ -75,7 +75,7 @@ router.patch("/user/:userAid", async (req, res) => {
     console.log("/Updaaaate region By Id2");
   } catch (e) {
     console.error(e);
-    res.status(500).send({ error: true, data: e.message });
+    res.status(450).send({ error: true, data: e.message });
   }
 });
 
@@ -91,7 +91,7 @@ router.get("/user/:userAid", async (req, res) => {
     console.log("/user");
   } catch (e) {
     console.error({ error: true, data: e.message });
-    res.status(400).send({ error: true, data: e.message });
+    res.status(450).send({ error: true, data: e.message });
   }
 });
 
@@ -123,7 +123,7 @@ router.post("/userFriend", async (req, res) => {
     // if (message.toString().includes("Must be unique")) {
     //   message = "Users already registered";
     // }
-    res.status(400).send({ error: true, data: message });
+    res.status(450).send({ error: true, data: message });
   }
 });
 
@@ -196,7 +196,7 @@ router.post("/userAddFriend", authMiddlewareUser, async (req, res) => {
   } catch (e) {
     console.error(e);
     let message = e.message;
-    res.status(400).send({ error: true, data: message });
+    res.status(450).send({ error: true, data: message });
   }
 });
 
@@ -234,7 +234,7 @@ router.post("/searchByUserName", async (req, res) => {
     // if (message.toString().includes("Must be unique")) {
     //   message = "Users already registered";
     // }
-    res.status(400).send({ error: true, data: message });
+    res.status(450).send({ error: true, data: message });
   }
 });
 
@@ -256,7 +256,7 @@ router.post("/searchToUser", async (req, res) => {
   } catch (e) {
     console.error(e);
     let message = e.message;
-    res.status(400).send({ error: true, data: message });
+    res.status(450).send({ error: true, data: message });
   }
 });
 
@@ -294,8 +294,12 @@ router.post("/verifyFollow", authMiddlewareUser, async (req, res) => {
 
     if (userNotFollowing.length != 0) {
       return res
-        .status(500)
-        .send({ error: true, data: "You have not followed this account" });
+        .status(400)
+        .send({
+          error: true,
+          data: "You have not followed this account",
+          userNotFollowing: userNotFollowing,
+        });
     }
 
     const followUser = await FollowOrders.findOne({
@@ -327,15 +331,10 @@ router.post("/verifyFollow", authMiddlewareUser, async (req, res) => {
       data: response.data,
       userPoints: user.userPoints,
     });
-    return res.send({
-      error: false,
-      data: response.data,
-      userNotFollowing: userNotFollowing,
-    });
   } catch (e) {
     console.error(e);
     let message = e.message;
-    res.status(500).send({ error: true, data: message });
+    res.status(450).send({ error: true, data: message });
   }
 });
 
@@ -389,7 +388,7 @@ router.post("/verifyAddFriend", authMiddlewareUser, async (req, res) => {
   } catch (e) {
     console.error(e);
     let message = e.message;
-    res.status(400).send({ error: true, data: message });
+    res.status(450).send({ error: true, data: message });
   }
 });
 

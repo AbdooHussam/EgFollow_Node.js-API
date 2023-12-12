@@ -73,7 +73,7 @@ router.post("/newFollowOrder", authMiddlewareUser, async (req, res) => {
     console.log("/pooost followOrder");
   } catch (e) {
     console.error(e);
-    res.status(400).send({ error: true, data: e.message });
+    res.status(450).send({ error: true, data: e.message });
   }
 });
 
@@ -97,7 +97,7 @@ router.get("/followOrders", async (req, res) => {
     console.log("/get all followOrders");
   } catch (e) {
     console.error(e);
-    res.status(500).send({ error: true, data: e.message });
+    res.status(450).send({ error: true, data: e.message });
   }
 });
 
@@ -122,7 +122,7 @@ router.get("/followOrdersRandom", authMiddlewareUser, async (req, res) => {
     console.log("/get all followOrdersRandom");
   } catch (e) {
     console.error(e);
-    res.status(500).send({ error: true, data: e.message });
+    res.status(450).send({ error: true, data: e.message });
   }
 });
 
@@ -158,7 +158,7 @@ router.patch("/followOrders/:followOrderAid", async (req, res) => {
     console.log("/Updaaaate followOrder By Id2");
   } catch (e) {
     console.error(e);
-    res.status(500).send({ error: true, data: e.message });
+    res.status(450).send({ error: true, data: e.message });
   }
 });
 
@@ -174,7 +174,7 @@ router.delete("/followOrders/:followOrderAid", async (req, res) => {
     console.log("/Deleeete followOrder By Id");
   } catch (e) {
     console.error(e);
-    res.status(500).send({ error: true, data: e.message });
+    res.status(450).send({ error: true, data: e.message });
   }
 });
 
@@ -195,7 +195,7 @@ router.get("/myfollowOrders/:userAid", async (req, res) => {
     console.log("/get followOrders By user Id");
   } catch (e) {
     console.error(e);
-    res.status(500).send({ error: true, data: e.message });
+    res.status(450).send({ error: true, data: e.message });
   }
 });
 
