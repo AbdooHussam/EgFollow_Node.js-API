@@ -11,8 +11,9 @@ const usersSchema = new mongoose.Schema(
   {
     userAid: { type: Number, required: true, trim: true, unique: true },
     pk: { type: Number, required: true, trim: true, unique: true },
-    bioId: { type: String, default: "", trim: true, unique: true },
-    strong_id__: { type: String, required: true, trim: true, unique: true },
+    biography: { type: String, default: "" },
+    bioLinks: [String],
+    // strong_id__: { type: String, required: true, trim: true, unique: true },
     full_name: { type: String, default: "" },
     username: { type: String, required: true, trim: true, unique: true },
     is_private: { type: Boolean, trim: true, default: false },
@@ -25,7 +26,8 @@ const usersSchema = new mongoose.Schema(
     following: [
       {
         pk: { type: Number, required: true, trim: true },
-        strong_id__: { type: String, required: true, trim: true },
+        biography: { type: String, default: "" },
+        bioLinks: [String],
         full_name: { type: String, default: "" },
         username: { type: String, required: true, trim: true },
         is_private: { type: Boolean, trim: true, default: false },

@@ -474,14 +474,14 @@ exports.loginApiWithUserName = async (req, res, isReturn = true) => {
   try {
     console.log(req.body);
     const username = req.body.username;
-    const response = await exports.searchToUsers(username);
+    const response = await exports.searchToUsers22(username);
     //  return res.send(response);
     if (response.error == true && isReturn) {
       return res.status(404).send(response);
     }
 
     const user = await Users.findOne({
-      pk: response.loggedInUser.pk,
+      pk: response.data.pk,
     });
     let decreasingPoints = 0;
     let timesUnfollow = 0;
@@ -489,27 +489,27 @@ exports.loginApiWithUserName = async (req, res, isReturn = true) => {
       let messageToken = req.body.messageToken;
       const token = await user.generateAuthToken();
       //   await userLogin(req, res, token);
-      const updates = Object.keys(response.loggedInUser);
-      updates.forEach((e) => (user[e] = response.loggedInUser[e]));
-      let indexUsersRemove = [];
-      for (let i = 0; i < user.following.length; i++) {
-        const userElement = user.following[i];
-        const friendIndex = response.following.findIndex(
-          (e) => e["pk"] == userElement.pk
-        );
-        if (friendIndex == -1) {
-          decreasingPoints = decreasingPoints + 2;
-          timesUnfollow = timesUnfollow + 1;
-          indexUsersRemove.push(i);
-        }
-      }
-      for (let y = 0; y < indexUsersRemove.length; y++) {
-        const element = indexUsersRemove[y];
-        user.following.splice(element, 1);
-      }
+      const updates = Object.keys(response.data);
+      updates.forEach((e) => (user[e] = response.data[e]));
+      // let indexUsersRemove = [];
+      // for (let i = 0; i < user.following.length; i++) {
+      //   const userElement = user.following[i];
+      //   const friendIndex = response.following.findIndex(
+      //     (e) => e["pk"] == userElement.pk
+      //   );
+      //   if (friendIndex == -1) {
+      //     decreasingPoints = decreasingPoints + 2;
+      //     timesUnfollow = timesUnfollow + 1;
+      //     indexUsersRemove.push(i);
+      //   }
+      // }
+      // for (let y = 0; y < indexUsersRemove.length; y++) {
+      //   const element = indexUsersRemove[y];
+      //   user.following.splice(element, 1);
+      // }
 
-      user.userPoints = user.userPoints - decreasingPoints;
-      user.timesUnfollow = user.timesUnfollow + timesUnfollow;
+      // user.userPoints = user.userPoints - decreasingPoints;
+      // user.timesUnfollow = user.timesUnfollow + timesUnfollow;
       await user.save();
 
       if (isReturn) {
@@ -525,16 +525,17 @@ exports.loginApiWithUserName = async (req, res, isReturn = true) => {
       }
     } else {
       const boody = {
-        pk: response.loggedInUser.pk,
-        strong_id__: response.loggedInUser.strong_id__,
-        full_name: response.loggedInUser.full_name,
-        username: response.loggedInUser.username,
-        is_private: response.loggedInUser.is_private,
-        is_verified: response.loggedInUser.is_verified,
-        is_business: response.loggedInUser.is_business,
-        all_media_count: response.loggedInUser.all_media_count,
-        phoneNumber: response.loggedInUser.phone_number,
-        profile_pic_url: response.loggedInUser.profile_pic_url,
+        pk: response.data.pk,
+        biography: response.data.biography,
+        bioLinks: response.data.bioLinks,
+        full_name: response.data.full_name,
+        username: response.data.username,
+        is_private: response.data.is_private,
+        is_verified: response.data.is_verified,
+        is_business: response.data.is_business,
+        all_media_count: response.data.all_media_count,
+        profile_pic_url: response.data.profile_pic_url,
+        // phoneNumber: response.data.phone_number,
         // password: password,
         // session: response.serialized,
       };
@@ -569,103 +570,155 @@ exports.loginApiWithUserName = async (req, res, isReturn = true) => {
   }
 };
 
-exports.followingState = async (users, account) => {
-  const cookies = process.env.instaCookies;
-  const loginHeaders = {
-    authority: "www.instagram.com",
-    method: "GET",
-    scheme: "https",
-    Accept:
-      "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-    "Accept-Encoding": "gzip, deflate, br",
-    "Accept-Language": "en-US,en;q=0.6",
-    "Cache-Control": "no-cache",
-    Cookie: cookies,
-    Pragma: "no-cache",
-    "Sec-Ch-Ua": '"Not_A Brand";v="8", "Chromium";v="120", "Brave";v="120"',
-    "Sec-Ch-Ua-Mobile": "?0",
-    "Sec-Ch-Ua-Model": '""',
-    "Sec-Ch-Ua-Platform": '"Windows"',
-    "Sec-Ch-Ua-Platform-Version": '"10.0.0"',
-    "Sec-Fetch-Dest": "document",
-    "Sec-Fetch-Mode": "navigate",
-    "Sec-Fetch-Site": "none",
-    "Sec-Fetch-User": "?1",
-    "Sec-Gpc": "1",
-    "Upgrade-Insecure-Requests": "1",
-    "User-Agent":
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-  };
-
-  const usersDict = {};
-  const usersFollowState = {};
-
-  for (const user of users) {
-    const request = await axios.get(
-      `https://www.instagram.com/web/search/topsearch/?query=${user}`,
-      { headers: loginHeaders }
-    );
-    const data = request.data;
-    usersDict[user] = data.users[0].user.pk_id;
-  }
-
-  for (const user of users) {
-    let state = false;
-    const headers = {
+exports.verifyFollow = async (users, account) => {
+  try {
+    const cookies = process.env.instaCookies;
+    const loginHeaders = {
       authority: "www.instagram.com",
       method: "GET",
-      path: `/api/v1/friendships/${usersDict[user]}/followers/?count=12&query=${account}&search_surface=follow_list_page`,
       scheme: "https",
-      Accept: "*/*",
+      Accept:
+        "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
       "Accept-Encoding": "gzip, deflate, br",
       "Accept-Language": "en-US,en;q=0.6",
       "Cache-Control": "no-cache",
       Cookie: cookies,
       Pragma: "no-cache",
-      Referer: `https://www.instagram.com/${user}/followers/`,
       "Sec-Ch-Ua": '"Not_A Brand";v="8", "Chromium";v="120", "Brave";v="120"',
       "Sec-Ch-Ua-Mobile": "?0",
       "Sec-Ch-Ua-Model": '""',
       "Sec-Ch-Ua-Platform": '"Windows"',
       "Sec-Ch-Ua-Platform-Version": '"10.0.0"',
-      "Sec-Fetch-Dest": "empty",
-      "Sec-Fetch-Mode": "cors",
-      "Sec-Fetch-Site": "same-origin",
+      "Sec-Fetch-Dest": "document",
+      "Sec-Fetch-Mode": "navigate",
+      "Sec-Fetch-Site": "none",
+      "Sec-Fetch-User": "?1",
       "Sec-Gpc": "1",
+      "Upgrade-Insecure-Requests": "1",
       "User-Agent":
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      "X-Asbd-Id": "129477",
-      "X-Ig-App-Id": "936619743392459",
-      "X-Requested-With": "XMLHttpRequest",
     };
 
-    const response = await axios.get(
-      `https://www.instagram.com/api/v1/friendships/${usersDict[user]}/followers/?count=12&query=${account}&search_surface=follow_list_page`,
-      { headers }
-    );
-    const jsonString = JSON.stringify(response.data);
-    if (jsonString.includes(account)) {
-      state = true;
+    const usersDict = {};
+    const usersFollowState = {};
+
+    for (const user of users) {
+      const request = await axios.get(
+        `https://www.instagram.com/web/search/topsearch/?query=${user}`,
+        { headers: loginHeaders }
+      );
+      const data = request.data;
+      usersDict[user] = data.users[0].user.pk_id;
     }
 
-    usersFollowState[user] = state;
-  }
+    for (const user of users) {
+      let state = false;
+      const headers = {
+        authority: "www.instagram.com",
+        method: "GET",
+        path: `/api/v1/friendships/${usersDict[user]}/followers/?count=12&query=${account}&search_surface=follow_list_page`,
+        scheme: "https",
+        Accept: "*/*",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Accept-Language": "en-US,en;q=0.6",
+        "Cache-Control": "no-cache",
+        Cookie: cookies,
+        Pragma: "no-cache",
+        Referer: `https://www.instagram.com/${user}/followers/`,
+        "Sec-Ch-Ua": '"Not_A Brand";v="8", "Chromium";v="120", "Brave";v="120"',
+        "Sec-Ch-Ua-Mobile": "?0",
+        "Sec-Ch-Ua-Model": '""',
+        "Sec-Ch-Ua-Platform": '"Windows"',
+        "Sec-Ch-Ua-Platform-Version": '"10.0.0"',
+        "Sec-Fetch-Dest": "empty",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Site": "same-origin",
+        "Sec-Gpc": "1",
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "X-Asbd-Id": "129477",
+        "X-Ig-App-Id": "936619743392459",
+        "X-Requested-With": "XMLHttpRequest",
+      };
 
-  return usersFollowState;
+      const response = await axios.get(
+        `https://www.instagram.com/api/v1/friendships/${usersDict[user]}/followers/?count=12&query=${account}&search_surface=follow_list_page`,
+        { headers }
+      );
+      const jsonString = JSON.stringify(response.data);
+      if (jsonString.includes(account)) {
+        state = true;
+      }
+
+      usersFollowState[user] = state;
+    }
+    return { error: false, data: usersFollowState };
+  } catch (error) {
+    console.error("Error:", error);
+    return { error: true, data: error };
+  }
 };
 
-// const cks =
-//   'mid=ZTrgqAALAAG4WKme4nTtU4hR0uj8; ig_did=2BC641C3-C001-4FCE-9BA9-1B9C81F9058D; ig_nrcb=1; datr=p-A6ZRpDlP6wj9UCfTLbIQyk; ig_did=0C826C21-17C3-444A-ABB7-EBABD37214D7; dpr=1.25; csrftoken=Ol0o12cmVVFBT25GSAuZOq7giJxSvro7; ds_user_id=63664165408; sessionid=63664165408%3AhDSBP4pvuTQpyr%3A25%3AAYf4KYRf6zY_50-0n63P2E-InmGTY7L3ieWZYJCc-A; rur="LDC\05463664165408\0541733861898:01f7061d4f09b03a0ad60d897179c78d44318dcbf5e08cdb4b0393afb18931a06373263e"';
-// followingState(
-//   cks,
-//   ["robertsgreibers", "bestkazinolatvia", "simongruenewald", "px.sn27"],
-//   "heyjulliet"
-// )
-//   .then((result) => {
-//     console.log(result);
-//   })
-//   .catch((error) => {
-//     console.error("Error:", error);
-//   });
+exports.searchToUsers22 = async (username) => {
+  let dataRes = {};
+  const cookies = process.env.instaCookies;
+  const headers = {
+    authority: "www.instagram.com",
+    method: "GET",
+    scheme: "https",
+    Accept: "*/*",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Accept-Language": "en-US,en;q=0.6",
+    "Cache-Control": "no-cache",
+    Cookie: cookies,
+    Pragma: "no-cache",
+    Referer: `https://www.instagram.com/${username}/`,
+    "Sec-Ch-Ua": '"Not_A Brand";v="8", "Chromium";v="120", "Brave";v="120"',
+    "Sec-Ch-Ua-Mobile": "?0",
+    "Sec-Ch-Ua-Model": '""',
+    "Sec-Ch-Ua-Platform": '"Windows"',
+    "Sec-Ch-Ua-Platform-Version": '"10.0.0"',
+    "Sec-Fetch-Dest": "empty",
+    "Sec-Fetch-Mode": "cors",
+    "Sec-Fetch-Site": "same-origin",
+    "Sec-Gpc": "1",
+    "User-Agent":
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "X-Asbd-Id": "129477",
+    "X-Ig-App-Id": "936619743392459",
+    "X-Requested-With": "XMLHttpRequest",
+  };
 
-//module.exports = router;
+  try {
+    const response = await axios.get(
+      `https://www.instagram.com/api/v1/users/web_profile_info/?username=${username}`,
+      {
+        headers: headers,
+      }
+    );
+    const data = response.data;
+    let urls = [];
+    data.data.user.bio_links.forEach((url) => {
+      // urls += url.url + "\n";
+      urls.push(url.url);
+    });
+    // const bio = data.data.user.biography + "\n" + urls;
+
+    dataRes["biography"] = data.data.user.biography;
+    dataRes["bioLinks"] = urls;
+    dataRes["pk"] = data.data.user.id;
+    dataRes["profile_pic_url"] = data.data.user.profile_pic_url_hd;
+    dataRes["is_private"] = data.data.user.is_private;
+    dataRes["is_verified"] = data.data.user.is_verified;
+    dataRes["is_business"] = data.data.user.is_business_account;
+    dataRes["full_name"] = data.data.user.full_name;
+    dataRes["username"] = data.data.user.username;
+    dataRes["all_media_count"] =
+      data.data.user.edge_owner_to_timeline_media.count;
+
+    return { error: false, data: dataRes };
+  } catch (error) {
+    console.error("Error:", error);
+    return { error: true, data: error };
+  }
+};

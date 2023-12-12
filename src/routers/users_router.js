@@ -240,26 +240,21 @@ router.post("/searchByUserName", async (req, res) => {
 router.post("/searchToUser", async (req, res) => {
   try {
     console.log(req.body);
-    const userAid = req.body.userAid;
-    const userPk = req.body.userPk;
+    const userName = req.body.userName;
     // let user = await Users.findOne({ userAid });
     // if (!user) {
     //   return res.status(404).send({ error: true, data: "not found" });
     // }
-    let response = await login_controller.searchToUsers(userPk);
-    return res.send({ error: false, data: response });
+    let response = await login_controller.searchToUsers22(userName);
     console.log(response.error);
     if (response.error == true) {
-      return res.status(404).send({ error: true, data: response });
+      return res.status(404).send(response);
     }
-    res.send({ error: false, data: response });
+    res.send(response);
     console.log("/pooost user");
   } catch (e) {
     console.error(e);
     let message = e.message;
-    // if (message.toString().includes("Must be unique")) {
-    //   message = "Users already registered";
-    // }
     res.status(400).send({ error: true, data: message });
   }
 });
@@ -270,8 +265,21 @@ router.post("/verifyFollow", async (req, res) => {
     const users = req.body.users;
     const account = req.body.account;
 
-    let response = await login_controller.followingState(users, account);
-    return res.send({ error: false, data: response });
+    let response = await login_controller.verifyFollow(users, account);
+    if (response.error == true) {
+      return res.status(404).send(response);
+    }
+    let userNotFollowing = [];
+    for (let key in response.data) {
+      if (response.data.hasOwnProperty(key) && response.data[key] !== true) {
+        userNotFollowing.push(key);
+      }
+    }
+    return res.send({
+      error: false,
+      data: response.data,
+      userNotFollowing: userNotFollowing,
+    });
   } catch (e) {
     console.error(e);
     let message = e.message;
