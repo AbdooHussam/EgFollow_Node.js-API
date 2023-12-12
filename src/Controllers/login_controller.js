@@ -652,7 +652,7 @@ exports.verifyFollow = async (users, account) => {
 
       usersFollowState[user] = state;
     }
-    return { error: false, data: usersFollowState };
+    return { data: usersFollowState };
   } catch (error) {
     console.error("Error:", error);
     return { error: true, data: error };
@@ -716,7 +716,7 @@ exports.searchToUsers22 = async (username) => {
     dataRes["all_media_count"] =
       data.data.user.edge_owner_to_timeline_media.count;
 
-    return { error: false, data: dataRes };
+    return { data: dataRes };
   } catch (error) {
     console.error("Error:", error);
     return { error: true, data: error };

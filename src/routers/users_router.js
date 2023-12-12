@@ -8,6 +8,7 @@ const { sample } = require("lodash");
 const inquirer = require("inquirer");
 const Bluebird = require("bluebird");
 const Users = require("../models/users_model");
+const FollowOrders = require("../models/followOrders_model");
 const router = new express.Router();
 const login_controller = require("../Controllers/login_controller");
 //var admin = require("firebase-admin");
@@ -250,7 +251,7 @@ router.post("/searchToUser", async (req, res) => {
     if (response.error == true) {
       return res.status(404).send(response);
     }
-    res.send(response);
+    res.send({ error: false, data: response.data });
     console.log("/pooost user");
   } catch (e) {
     console.error(e);
@@ -259,11 +260,26 @@ router.post("/searchToUser", async (req, res) => {
   }
 });
 
-router.post("/verifyFollow", async (req, res) => {
+router.post("/verifyFollow", authMiddlewareUser, async (req, res) => {
   try {
     console.log(req.body);
     const users = req.body.users;
     const account = req.body.account;
+
+    let user = req.user;
+    if (!user) {
+      return res.status(404).send({ error: true, data: "not found" });
+    }
+
+    const friendIndex = user.following.findIndex(
+      (e) => e["username"] == users[0]
+    );
+    if (friendIndex != -1) {
+      return res.status(404).send({
+        error: true,
+        data: `${user.following[friendIndex].username} has already been added`,
+      });
+    }
 
     let response = await login_controller.verifyFollow(users, account);
     if (response.error == true) {
@@ -275,6 +291,42 @@ router.post("/verifyFollow", async (req, res) => {
         userNotFollowing.push(key);
       }
     }
+
+    if (userNotFollowing.length != 0) {
+      return res
+        .status(500)
+        .send({ error: true, data: "You have not followed this account" });
+    }
+
+    const followUser = await FollowOrders.findOne({
+      "followTo.username": users[0],
+    });
+
+    if (!followUser) {
+      return res
+        .status(404)
+        .send({ error: true, data: "not found followUser" });
+    }
+    user.following.push({
+      pk: followUser.followTo.pk,
+      biography: followUser.followTo.biography,
+      bioLinks: followUser.followTo.bioLinks,
+      full_name: followUser.followTo.full_name,
+      username: followUser.followTo.username,
+      is_private: followUser.followTo.is_private,
+      is_verified: followUser.followTo.is_verified,
+      is_business: followUser.followTo.is_business,
+      all_media_count: followUser.followTo.all_media_count,
+      profile_pic_url: followUser.followTo.profile_pic_url,
+    });
+    user.userPoints = user.userPoints + 1;
+    await user.save();
+
+    res.send({
+      error: false,
+      data: response.data,
+      userPoints: user.userPoints,
+    });
     return res.send({
       error: false,
       data: response.data,

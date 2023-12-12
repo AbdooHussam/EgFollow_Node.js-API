@@ -33,7 +33,7 @@ router.post("/newFollowOrder", authMiddlewareUser, async (req, res) => {
       }
     }
     const followOrder1 = await FollowOrders.findOne({
-      followFrom: userAid,
+      orderFrom: userAid,
       "followTo.pk": response.pk,
     });
     if (followOrder1) {
@@ -61,7 +61,7 @@ router.post("/newFollowOrder", authMiddlewareUser, async (req, res) => {
           all_media_count: response.media_count,
           profile_pic_url: response.hd_profile_pic_url_info.url,
         },
-        followFrom: userAid,
+        orderFrom: userAid,
         paidPoints: paidPoints,
         targetFollowers: targetFollowers,
       };
@@ -182,7 +182,7 @@ router.get("/myfollowOrders/:userAid", async (req, res) => {
   try {
     const userAid = req.params.userAid;
     const followOrder = await FollowOrders.find({
-      followFrom: userAid,
+      orderFrom: userAid,
     }).sort({
       createdAt: -1,
     });

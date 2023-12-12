@@ -11,6 +11,7 @@ const usersSchema = new mongoose.Schema(
   {
     userAid: { type: Number, required: true, trim: true, unique: true },
     pk: { type: Number, required: true, trim: true, unique: true },
+    bioId: { type: String, default: "", trim: true, unique: true },
     biography: { type: String, default: "" },
     bioLinks: [String],
     // strong_id__: { type: String, required: true, trim: true, unique: true },
