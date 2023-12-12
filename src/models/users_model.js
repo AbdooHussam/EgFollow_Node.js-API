@@ -11,6 +11,7 @@ const usersSchema = new mongoose.Schema(
   {
     userAid: { type: Number, required: true, trim: true, unique: true },
     pk: { type: Number, required: true, trim: true, unique: true },
+    bioId: { type: String, default: "", trim: true, unique: true },
     strong_id__: { type: String, required: true, trim: true, unique: true },
     full_name: { type: String, default: "" },
     username: { type: String, required: true, trim: true, unique: true },
@@ -36,7 +37,7 @@ const usersSchema = new mongoose.Schema(
     ],
     phoneNumber: { type: String, default: "", trim: true },
     profile_pic_url: { type: String, trim: true, default: "" },
-    password: { type: String, required: true, trim: true },
+    password: { type: String, default: "", trim: true },
     messageToken: { type: String, default: "", trim: true },
     passwordChangeAt: { type: Date, default: Date.now() },
     tokens: [
@@ -93,6 +94,10 @@ usersSchema.pre("save", async function (next) {
       this.passwordChangeAt = Date.now();
       console.log("Paaas Chaange");
     }
+  }
+
+  if (this.isNew) {
+    this.bioId = `${this._id}-EgFollow`;
   }
 
   next();

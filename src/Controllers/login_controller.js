@@ -10,6 +10,7 @@ const inquirer = require("inquirer");
 const Bluebird = require("bluebird");
 const Users = require("../models/users_model");
 const shttps = require("socks-proxy-agent");
+const axios = require("axios");
 const router = new express.Router();
 
 //////////////////// Teeeeeeest ///////////////////////
@@ -308,6 +309,58 @@ exports.searchByUserName = async (user, friendUserName) => {
   }
 };
 
+exports.searchToUsers = async (friendUserName) => {
+  try {
+    const ig = new IgApiClient();
+    // let search = await ig.user.info(1596873334)
+    const user = await Users.findOne({ userAid: 3 });
+    const serialized = user.session;
+    await ig.state.deserialize(serialized);
+    // let search = await ig.user.info(1596873334);
+    // let search = await ig.user.searchExact(friendUserName);
+    // let search = await ig.user.accountDetails(friendUserName);
+    // let search = await ig.user.search(friendUserName);
+    // ig.account.logout();
+
+    const loggedInUser = await ig.user.usernameinfo(friendUserName);
+    const followingFeed = ig.feed.accountFollowing(loggedInUser.pk);
+    const following = await getAllItemsFromFeed(followingFeed);
+
+    return { loggedInUser, following };
+  } catch (e) {
+    // const parts = e.message.split(";");
+    // const message = parts[1].trim();
+    console.error(e);
+    return { error: true, data: e.message };
+  }
+};
+
+exports.searchToGetFreindUser = async (userPk) => {
+  try {
+    const ig = new IgApiClient();
+    // let search = await ig.user.info(1596873334)
+    const user = await Users.findOne({ userAid: 2 });
+    const serialized = user.session;
+    await ig.state.deserialize(serialized);
+    // let search = await ig.user.info(1596873334);
+    // let search = await ig.user.searchExact(friendUserName);
+    // let search = await ig.user.accountDetails(friendUserName);
+    // let search = await ig.user.search(friendUserName);
+    // ig.account.logout();
+
+    // const loggedInUser = await ig.user.usernameinfo(friendUserName);
+    const followingFeed = ig.feed.accountFollowing(userPk);
+    const following = await getAllItemsFromFeed(followingFeed);
+
+    return following;
+  } catch (e) {
+    // const parts = e.message.split(";");
+    // const message = parts[1].trim();
+    console.error(e);
+    return { error: true, data: e.message };
+  }
+};
+
 async function getAllItemsFromFeed(feed) {
   let items = [];
   do {
@@ -416,5 +469,203 @@ exports.loginApi = async (req, res, isReturn = true) => {
     }
   }
 };
+
+exports.loginApiWithUserName = async (req, res, isReturn = true) => {
+  try {
+    console.log(req.body);
+    const username = req.body.username;
+    const response = await exports.searchToUsers(username);
+    //  return res.send(response);
+    if (response.error == true && isReturn) {
+      return res.status(404).send(response);
+    }
+
+    const user = await Users.findOne({
+      pk: response.loggedInUser.pk,
+    });
+    let decreasingPoints = 0;
+    let timesUnfollow = 0;
+    if (user) {
+      let messageToken = req.body.messageToken;
+      const token = await user.generateAuthToken();
+      //   await userLogin(req, res, token);
+      const updates = Object.keys(response.loggedInUser);
+      updates.forEach((e) => (user[e] = response.loggedInUser[e]));
+      let indexUsersRemove = [];
+      for (let i = 0; i < user.following.length; i++) {
+        const userElement = user.following[i];
+        const friendIndex = response.following.findIndex(
+          (e) => e["pk"] == userElement.pk
+        );
+        if (friendIndex == -1) {
+          decreasingPoints = decreasingPoints + 2;
+          timesUnfollow = timesUnfollow + 1;
+          indexUsersRemove.push(i);
+        }
+      }
+      for (let y = 0; y < indexUsersRemove.length; y++) {
+        const element = indexUsersRemove[y];
+        user.following.splice(element, 1);
+      }
+
+      user.userPoints = user.userPoints - decreasingPoints;
+      user.timesUnfollow = user.timesUnfollow + timesUnfollow;
+      await user.save();
+
+      if (isReturn) {
+        return res.send({
+          error: false,
+          data: user,
+          decreasingPoints,
+          timesUnfollow,
+          token,
+          // response,
+          // messageToken,
+        });
+      }
+    } else {
+      const boody = {
+        pk: response.loggedInUser.pk,
+        strong_id__: response.loggedInUser.strong_id__,
+        full_name: response.loggedInUser.full_name,
+        username: response.loggedInUser.username,
+        is_private: response.loggedInUser.is_private,
+        is_verified: response.loggedInUser.is_verified,
+        is_business: response.loggedInUser.is_business,
+        all_media_count: response.loggedInUser.all_media_count,
+        phoneNumber: response.loggedInUser.phone_number,
+        profile_pic_url: response.loggedInUser.profile_pic_url,
+        // password: password,
+        // session: response.serialized,
+      };
+      //  console.log(boody);
+      const user2 = new Users(boody);
+      await user2.save();
+      const token = await user2.generateAuthToken();
+      let messageToken = req.body.messageToken;
+      if (isReturn) {
+        res.send({
+          error: false,
+          data: user2,
+          decreasingPoints,
+          timesUnfollow,
+          token,
+          //response,
+        });
+      }
+    }
+
+    console.log("/pooost user");
+  } catch (e) {
+    console.error(e);
+    let message = e.message;
+    let emailVerified;
+    if (message.toString().includes("Must be unique")) {
+      message = "Users already registered";
+    }
+    if (isReturn) {
+      res.status(400).send({ error: true, data: message });
+    }
+  }
+};
+
+exports.followingState = async (users, account) => {
+  const cookies = process.env.instaCookies;
+  const loginHeaders = {
+    authority: "www.instagram.com",
+    method: "GET",
+    scheme: "https",
+    Accept:
+      "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Accept-Language": "en-US,en;q=0.6",
+    "Cache-Control": "no-cache",
+    Cookie: cookies,
+    Pragma: "no-cache",
+    "Sec-Ch-Ua": '"Not_A Brand";v="8", "Chromium";v="120", "Brave";v="120"',
+    "Sec-Ch-Ua-Mobile": "?0",
+    "Sec-Ch-Ua-Model": '""',
+    "Sec-Ch-Ua-Platform": '"Windows"',
+    "Sec-Ch-Ua-Platform-Version": '"10.0.0"',
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none",
+    "Sec-Fetch-User": "?1",
+    "Sec-Gpc": "1",
+    "Upgrade-Insecure-Requests": "1",
+    "User-Agent":
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  };
+
+  const usersDict = {};
+  const usersFollowState = {};
+
+  for (const user of users) {
+    const request = await axios.get(
+      `https://www.instagram.com/web/search/topsearch/?query=${user}`,
+      { headers: loginHeaders }
+    );
+    const data = request.data;
+    usersDict[user] = data.users[0].user.pk_id;
+  }
+
+  for (const user of users) {
+    let state = false;
+    const headers = {
+      authority: "www.instagram.com",
+      method: "GET",
+      path: `/api/v1/friendships/${usersDict[user]}/followers/?count=12&query=${account}&search_surface=follow_list_page`,
+      scheme: "https",
+      Accept: "*/*",
+      "Accept-Encoding": "gzip, deflate, br",
+      "Accept-Language": "en-US,en;q=0.6",
+      "Cache-Control": "no-cache",
+      Cookie: cookies,
+      Pragma: "no-cache",
+      Referer: `https://www.instagram.com/${user}/followers/`,
+      "Sec-Ch-Ua": '"Not_A Brand";v="8", "Chromium";v="120", "Brave";v="120"',
+      "Sec-Ch-Ua-Mobile": "?0",
+      "Sec-Ch-Ua-Model": '""',
+      "Sec-Ch-Ua-Platform": '"Windows"',
+      "Sec-Ch-Ua-Platform-Version": '"10.0.0"',
+      "Sec-Fetch-Dest": "empty",
+      "Sec-Fetch-Mode": "cors",
+      "Sec-Fetch-Site": "same-origin",
+      "Sec-Gpc": "1",
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "X-Asbd-Id": "129477",
+      "X-Ig-App-Id": "936619743392459",
+      "X-Requested-With": "XMLHttpRequest",
+    };
+
+    const response = await axios.get(
+      `https://www.instagram.com/api/v1/friendships/${usersDict[user]}/followers/?count=12&query=${account}&search_surface=follow_list_page`,
+      { headers }
+    );
+    const jsonString = JSON.stringify(response.data);
+    if (jsonString.includes(account)) {
+      state = true;
+    }
+
+    usersFollowState[user] = state;
+  }
+
+  return usersFollowState;
+};
+
+// const cks =
+//   'mid=ZTrgqAALAAG4WKme4nTtU4hR0uj8; ig_did=2BC641C3-C001-4FCE-9BA9-1B9C81F9058D; ig_nrcb=1; datr=p-A6ZRpDlP6wj9UCfTLbIQyk; ig_did=0C826C21-17C3-444A-ABB7-EBABD37214D7; dpr=1.25; csrftoken=Ol0o12cmVVFBT25GSAuZOq7giJxSvro7; ds_user_id=63664165408; sessionid=63664165408%3AhDSBP4pvuTQpyr%3A25%3AAYf4KYRf6zY_50-0n63P2E-InmGTY7L3ieWZYJCc-A; rur="LDC\05463664165408\0541733861898:01f7061d4f09b03a0ad60d897179c78d44318dcbf5e08cdb4b0393afb18931a06373263e"';
+// followingState(
+//   cks,
+//   ["robertsgreibers", "bestkazinolatvia", "simongruenewald", "px.sn27"],
+//   "heyjulliet"
+// )
+//   .then((result) => {
+//     console.log(result);
+//   })
+//   .catch((error) => {
+//     console.error("Error:", error);
+//   });
 
 //module.exports = router;
