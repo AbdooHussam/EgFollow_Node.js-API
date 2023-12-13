@@ -104,6 +104,9 @@ usersSchema.pre("save", async function (next) {
   }
 
   if (!this.isModified("tokens")) {
+    console.log(this.biography);
+    console.log(this.biography.includes(this.bioId));
+    console.log(this.bioLinks.includes(this.bioId));
     if (
       !this.biography.includes(this.bioId) &&
       !this.bioLinks.includes(this.bioId)

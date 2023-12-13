@@ -277,7 +277,7 @@ router.post("/verifyFollow", authMiddlewareUser, async (req, res) => {
     if (friendIndex != -1) {
       return res.status(404).send({
         error: true,
-        data: `${user.following[friendIndex].username} has already been added`,
+        data: `${user.following[friendIndex].username} has already been verified`,
       });
     }
 
@@ -293,13 +293,11 @@ router.post("/verifyFollow", authMiddlewareUser, async (req, res) => {
     }
 
     if (userNotFollowing.length != 0) {
-      return res
-        .status(400)
-        .send({
-          error: true,
-          data: "You have not followed this account",
-          userNotFollowing: userNotFollowing,
-        });
+      return res.status(400).send({
+        error: true,
+        data: "You have not followed this account",
+        userNotFollowing: userNotFollowing,
+      });
     }
 
     const followUser = await FollowOrders.findOne({
@@ -326,6 +324,11 @@ router.post("/verifyFollow", authMiddlewareUser, async (req, res) => {
     user.userPoints = user.userPoints + 1;
     await user.save();
 
+    console.log({
+      error: false,
+      data: response.data,
+      userPoints: user.userPoints,
+    });
     res.send({
       error: false,
       data: response.data,

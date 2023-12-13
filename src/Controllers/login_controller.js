@@ -651,6 +651,9 @@ exports.verifyFollow = async (users, account) => {
 
       usersFollowState[user] = state;
     }
+
+    console.log(usersFollowState);
+
     return { data: usersFollowState };
   } catch (error) {
     console.error("Error:", error);
