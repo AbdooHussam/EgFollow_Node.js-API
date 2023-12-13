@@ -12,6 +12,7 @@ const usersSchema = new mongoose.Schema(
     userAid: { type: Number, required: true, trim: true, unique: true },
     pk: { type: Number, required: true, trim: true, unique: true },
     bioId: { type: String, default: "", trim: true, unique: true },
+    isBioVerified: { type: Boolean, trim: true, default: true },
     biography: { type: String, default: "" },
     bioLinks: [String],
     // strong_id__: { type: String, required: true, trim: true, unique: true },
@@ -104,10 +105,11 @@ usersSchema.pre("save", async function (next) {
 
   if (!this.isModified("tokens")) {
     if (
-      !this.biography.includes(this.bioId) &&
+      !this.biography.includes(this.bioId) ||
       !this.bioLinks.includes(this.bioId)
     ) {
-      throw new Error("Please add your Bio_Id to continue");
+      this.isBioVerified = false;
+      //throw new Error("Please add your Bio_Id to continue");
     }
   }
 

@@ -560,7 +560,6 @@ exports.loginApiWithUserName = async (req, res, isReturn = true) => {
   } catch (e) {
     console.error(e);
     let message = e.message;
-    let emailVerified;
     if (message.toString().includes("Must be unique")) {
       message = "Users already registered";
     }
