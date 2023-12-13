@@ -17,49 +17,42 @@ router.post("/newFollowOrder", authMiddlewareUser, async (req, res) => {
     if (!user) {
       return res.status(404).send({ error: true, data: "not found" });
     }
-    let response = await login_controller.searchByUserName(user, orderUserName);
+    let response = await login_controller.searchToUsers22(orderUserName);
     console.log(response.error);
     if (response.error == true) {
-      req.body.username = user.username;
-      req.body.password = user.password;
-      await login_controller.loginApi(req, res, false);
-
-      user = await Users.findOne({ pk: user.pk });
-      if (user) {
-        response = await login_controller.searchByUserName(user, orderUserName);
-        if (response.error == true) {
-          return res.status(404).send({ error: true, data: response });
-        }
-      }
+      return res.status(404).send(response);
     }
     const followOrder1 = await FollowOrders.findOne({
       orderFrom: userAid,
-      "followTo.pk": response.pk,
+      "followTo.pk": response.data.pk,
     });
+    if (user.userPoints >= paidPoints) {
+      user.userPoints = user.userPoints - paidPoints;
+      await user.save();
+    } else {
+      return res
+        .status(404)
+        .send({ error: true, data: "Your Points not enough" });
+    }
     if (followOrder1) {
-      if (user.userPoints >= paidPoints) {
-        user.userPoints = user.userPoints - paidPoints;
-        await user.save();
-      } else {
-        return res
-          .status(404)
-          .send({ error: true, data: "Your Points not enough" });
-      }
       followOrder1.targetFollowers =
-        followOrder1.targetFollowers + targetFollowers;
-      followOrder1.paidPoints = followOrder1.paidPoints + paidPoints;
+        followOrder1.targetFollowers + parseInt(targetFollowers);
+      followOrder1.paidPoints = followOrder1.paidPoints + parseInt(paidPoints);
+      await followOrder1.save();
+      return res.send({ error: false, data: followOrder1 });
     } else {
       const boody = {
         followTo: {
-          pk: response.pk,
-          strong_id__: response.strong_id__,
-          full_name: response.full_name,
-          username: response.username,
-          is_private: response.is_private,
-          is_verified: response.is_verified,
-          is_business: response.is_business,
-          all_media_count: response.media_count,
-          profile_pic_url: response.hd_profile_pic_url_info.url,
+          pk: response.data.pk,
+          biography: response.data.biography,
+          bioLinks: response.data.bioLinks,
+          full_name: response.data.full_name,
+          username: response.data.username,
+          is_private: response.data.is_private,
+          is_verified: response.data.is_verified,
+          is_business: response.data.is_business,
+          all_media_count: response.data.media_count,
+          profile_pic_url: response.data.profile_pic_url,
         },
         orderFrom: userAid,
         paidPoints: paidPoints,
@@ -81,8 +74,14 @@ router.get("/followOrders", async (req, res) => {
   try {
     const followOrderAid = req.query.followOrderAid;
     const followOrder = followOrderAid
-      ? await FollowOrders.findOne({ followOrderAid })
-      : await FollowOrders.find({});
+      ? await FollowOrders.findOne({ followOrderAid }).populate({
+          path: "orderFrom",
+          foreignField: "userAid",
+        })
+      : await FollowOrders.find({}).populate({
+          path: "orderFrom",
+          foreignField: "userAid",
+        });
     //.sort({ followOrderAid: 1 });
     // if (followOrder.length == 0) {
     //   return res

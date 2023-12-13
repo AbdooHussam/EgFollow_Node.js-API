@@ -35,28 +35,28 @@ const followOrdersSchema = new mongoose.Schema(
   }
 );
 
-followOrdersSchema.pre("save", async function (next) {
-  if (this.isNew) {
-    const user = await Users.findOne({ userAid: this.orderFrom });
-    if (!user) {
-      throw new Error("User Not Found");
-    }
-    if (user.userPoints >= this.paidPoints) {
-      user.userPoints = user.userPoints - this.paidPoints;
-      await user.save();
-    } else {
-      throw new Error("Your Points not enough");
-    }
-  }
+// followOrdersSchema.pre("save", async function (next) {
+//   if (this.isNew) {
+//     const user = await Users.findOne({ userAid: this.orderFrom });
+//     if (!user) {
+//       throw new Error("User Not Found");
+//     }
+//     if (user.userPoints >= this.paidPoints) {
+//       user.userPoints = user.userPoints - this.paidPoints;
+//       await user.save();
+//     } else {
+//       throw new Error("Your Points not enough");
+//     }
+//   }
 
-  next();
-});
+//   next();
+// });
 
-followOrdersSchema.pre(/^find/, function (next) {
-  this.populate({ path: "orderFrom", foreignField: "userAid" });
+// followOrdersSchema.pre(/^find/, function (next) {
+//   this.populate({ path: "orderFrom", foreignField: "userAid" });
 
-  next();
-});
+//   next();
+// });
 
 followOrdersSchema.plugin(uniqueValidator, { data: "Must be unique" });
 followOrdersSchema.plugin(arrayUniquePlugin);
