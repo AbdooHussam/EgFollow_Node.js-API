@@ -105,11 +105,13 @@ usersSchema.pre("save", async function (next) {
 
   if (!this.isModified("tokens")) {
     if (
-      !this.biography.includes(this.bioId) ||
+      !this.biography.includes(this.bioId) &&
       !this.bioLinks.includes(this.bioId)
     ) {
       this.isBioVerified = false;
       //throw new Error("Please add your Bio_Id to continue");
+    } else {
+      this.isBioVerified = true;
     }
   }
 
