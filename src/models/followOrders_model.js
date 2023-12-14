@@ -19,6 +19,8 @@ const followOrdersSchema = new mongoose.Schema(
       is_verified: { type: Boolean, trim: true, default: false },
       is_business: { type: Boolean, trim: true, default: false },
       all_media_count: { type: Number, trim: true, default: 0 },
+      followersCount: { type: Number, trim: true, default: 0 },
+      followingCount: { type: Number, trim: true, default: 0 },
       profile_pic_url: { type: String, trim: true, default: "" },
     },
 

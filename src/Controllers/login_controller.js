@@ -534,6 +534,8 @@ exports.loginApiWithUserName = async (req, res, isReturn = true) => {
         is_verified: response.data.is_verified,
         is_business: response.data.is_business,
         all_media_count: response.data.all_media_count,
+        followersCount: response.data.followersCount,
+        followingCount: response.data.followingCount,
         profile_pic_url: response.data.profile_pic_url,
         // phoneNumber: response.data.phone_number,
         // password: password,
@@ -717,8 +719,8 @@ exports.searchToUsers22 = async (username) => {
     dataRes["username"] = data.data.user.username;
     dataRes["all_media_count"] =
       data.data.user.edge_owner_to_timeline_media.count;
-    dataRes["followers"] = data.data.user.edge_followed_by.count;
-    dataRes["following"] = data.data.user.edge_follow.count;
+    dataRes["followersCount"] = data.data.user.edge_followed_by.count;
+    dataRes["followingCount"] = data.data.user.edge_follow.count;
 
     return { data: dataRes };
   } catch (error) {

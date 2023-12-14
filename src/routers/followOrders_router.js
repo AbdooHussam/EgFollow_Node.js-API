@@ -52,6 +52,8 @@ router.post("/newFollowOrder", authMiddlewareUser, async (req, res) => {
           is_verified: response.data.is_verified,
           is_business: response.data.is_business,
           all_media_count: response.data.media_count,
+          followersCount: response.data.followersCount,
+          followingCount: response.data.followingCount,
           profile_pic_url: response.data.profile_pic_url,
         },
         orderFrom: userAid,
