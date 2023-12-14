@@ -39,7 +39,11 @@ router.post("/newFollowOrder", authMiddlewareUser, async (req, res) => {
         followOrder1.targetFollowers + parseInt(targetFollowers);
       followOrder1.paidPoints = followOrder1.paidPoints + parseInt(paidPoints);
       await followOrder1.save();
-      return res.send({ error: false, data: followOrder1 });
+      return res.send({
+        error: false,
+        data: followOrder1,
+        userPoints: user.userPoints,
+      });
     } else {
       const boody = {
         followTo: {
@@ -62,7 +66,11 @@ router.post("/newFollowOrder", authMiddlewareUser, async (req, res) => {
       };
       const followOrder = new FollowOrders(boody);
       await followOrder.save();
-      return res.send({ error: false, data: followOrder });
+      return res.send({
+        error: false,
+        data: followOrder,
+        userPoints: user.userPoints,
+      });
     }
 
     console.log("/pooost followOrder");

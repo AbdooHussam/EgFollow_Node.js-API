@@ -10,7 +10,7 @@ const followOrdersSchema = new mongoose.Schema(
   {
     followOrderAid: { type: Number, required: true, trim: true, unique: true },
     followTo: {
-      pk: { type: Number, required: true, trim: true, unique: true },
+      pk: { type: Number, required: true, trim: true },
       biography: { type: String, default: "" },
       bioLinks: [String],
       full_name: { type: String, default: "" },
