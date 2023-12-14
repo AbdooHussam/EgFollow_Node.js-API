@@ -187,9 +187,13 @@ router.delete("/followOrders/:followOrderAid", async (req, res) => {
   }
 });
 
-router.get("/myfollowOrders/:userAid", async (req, res) => {
+router.get("/myfollowOrders", authMiddlewareUser, async (req, res) => {
   try {
-    const userAid = req.params.userAid;
+    let user = req.user;
+    const userAid = user.userAid;
+    if (!user) {
+      return res.status(404).send({ error: true, data: "not found" });
+    }
     const followOrder = await FollowOrders.find({
       orderFrom: userAid,
     }).sort({
