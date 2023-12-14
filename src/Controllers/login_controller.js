@@ -717,6 +717,8 @@ exports.searchToUsers22 = async (username) => {
     dataRes["username"] = data.data.user.username;
     dataRes["all_media_count"] =
       data.data.user.edge_owner_to_timeline_media.count;
+    dataRes["followers"] = data.data.user.edge_followed_by.count;
+    dataRes["following"] = data.data.user.edge_follow.count;
 
     return { data: dataRes };
   } catch (error) {
