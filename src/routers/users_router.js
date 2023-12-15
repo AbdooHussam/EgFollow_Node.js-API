@@ -309,6 +309,9 @@ router.post("/verifyFollow", authMiddlewareUser, async (req, res) => {
         .status(404)
         .send({ error: true, data: "not found followUser" });
     }
+
+    followUser.currentFollowers = followUser.currentFollowers + 1;
+    await followUser.save();
     user.following.push({
       pk: followUser.followTo.pk,
       biography: followUser.followTo.biography,
