@@ -64,7 +64,7 @@ router.post("/newFollowOrder", authMiddlewareUser, async (req, res) => {
       await user.save();
       return res.status(300).send({
         error: false,
-        data: user,
+        userPoints: user.userPoints,
         decreasingPoints,
         timesUnfollow,
         // response,
