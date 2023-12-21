@@ -22,6 +22,56 @@ router.post("/newFollowOrder", authMiddlewareUser, async (req, res) => {
     if (response.error == true) {
       return res.status(404).send(response);
     }
+    let usersFollowCheck = [];
+    for (let index = 0; index < user.following.length; index++) {
+      usersFollowCheck.push(user.following[index].username);
+    }
+
+    let responseVerify = await login_controller.verifyFollow(
+      usersFollowCheck,
+      user.username
+    );
+    if (responseVerify.error == true) {
+      return res.status(404).send(responseVerify);
+    }
+    let userNotFollowing = [];
+    let decreasingPoints = 0;
+    let timesUnfollow = 0;
+    for (let element in responseVerify.data) {
+      if (
+        responseVerify.data.hasOwnProperty(element) &&
+        responseVerify.data[element] !== true
+      ) {
+        userNotFollowing.push(element);
+      }
+    }
+    if (userNotFollowing.length != 0) {
+      for (let y = 0; y < userNotFollowing.length; y++) {
+        decreasingPoints = decreasingPoints + 2;
+        timesUnfollow = timesUnfollow + 1;
+        const element = userNotFollowing[y];
+        console.log(element);
+        let userIndex = user.following.findIndex(
+          (e) => e.username.toString() == element.toString()
+        );
+        if (userIndex != -1) {
+          user.following.splice(userIndex, 1);
+        }
+      }
+
+      user.userPoints = user.userPoints - decreasingPoints;
+      user.timesUnfollow = user.timesUnfollow + timesUnfollow;
+      await user.save();
+      return res.status(300).send({
+        error: false,
+        data: user,
+        decreasingPoints,
+        timesUnfollow,
+        // response,
+        // messageToken,
+      });
+    }
+
     const followOrder1 = await FollowOrders.findOne({
       orderFrom: userAid,
       "followTo.pk": response.data.pk,
