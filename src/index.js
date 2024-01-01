@@ -12,6 +12,7 @@ require("./db/mongoose");
 const usersRouter = require("./routers/users_router");
 const followOrdersRouter = require("./routers/followOrders_router");
 const promoCodesRouter = require("./routers/promoCode_router");
+const settingsRouter = require("./routers/settings_router");
 
 process.on("uncaughtException", (err) => {
   console.log("uncaughtException");
@@ -41,6 +42,7 @@ app.use(hpp());
 app.use("/api/users", usersRouter);
 app.use("/api/followOrders", followOrdersRouter);
 app.use("/api/promoCodes", promoCodesRouter);
+app.use("/api/settings", settingsRouter);
 //app.use("/api/notifications", notificationsRouter);
 //app.use("/api/login", loginRouter);
 

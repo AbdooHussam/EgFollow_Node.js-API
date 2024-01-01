@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const validator = require("validator");
 const jwt = require("jsonwebtoken");
+const Settings = require("../models/settings_model");
 var uniqueValidator = require("mongoose-unique-validator");
 const arrayUniquePlugin = require("mongoose-unique-array");
 const autoIncrement = require("@ed3ath/mongoose-auto-increment");
@@ -103,6 +104,8 @@ usersSchema.pre("save", async function (next) {
   }
   if (this.isNew) {
     this.bioId = `${this._id}-EgFollow`;
+    const setting = await Settings.findOne({ settingAid: 0 });
+    this.userPoints = setting.initNewUserPoints;
   }
 
   if (!this.isModified("tokens") && this.isBioVerified == false) {
