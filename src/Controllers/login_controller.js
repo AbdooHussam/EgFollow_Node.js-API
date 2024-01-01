@@ -575,7 +575,11 @@ exports.loginApiWithUserName = async (req, res, isReturn = true) => {
 
 exports.verifyFollow = async (users, account) => {
   try {
-    const cookies = process.env.instaCookies;
+    const randomIndex = Math.floor(
+      Math.random() * process.env.instaCookies.length
+    );
+    // const cookies = process.env.instaCookies;
+    const cookies = process.env.instaCookies[randomIndex];
     const loginHeaders = {
       authority: "www.instagram.com",
       method: "GET",
@@ -667,7 +671,11 @@ exports.verifyFollow = async (users, account) => {
 
 exports.searchToUsers22 = async (username) => {
   let dataRes = {};
-  const cookies = process.env.instaCookies;
+  const randomIndex = Math.floor(
+    Math.random() * process.env.instaCookies.length
+  );
+  // const cookies = process.env.instaCookies;
+  const cookies = process.env.instaCookies[randomIndex];
   const headers = {
     authority: "www.instagram.com",
     method: "GET",
