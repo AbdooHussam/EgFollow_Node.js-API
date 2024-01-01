@@ -575,11 +575,9 @@ exports.loginApiWithUserName = async (req, res, isReturn = true) => {
 
 exports.verifyFollow = async (users, account) => {
   try {
-    const randomIndex = Math.floor(
-      Math.random() * process.env.instaCookies.length
-    );
+    const randomIndex = Math.floor(Math.random() * global.allCookies.length);
     // const cookies = process.env.instaCookies;
-    const cookies = process.env.instaCookies[randomIndex];
+    const cookies = global.allCookies[randomIndex];
     const loginHeaders = {
       authority: "www.instagram.com",
       method: "GET",
@@ -671,11 +669,9 @@ exports.verifyFollow = async (users, account) => {
 
 exports.searchToUsers22 = async (username) => {
   let dataRes = {};
-  const randomIndex = Math.floor(
-    Math.random() * process.env.instaCookies.length
-  );
+  const randomIndex = Math.floor(Math.random() * global.allCookies.length);
   // const cookies = process.env.instaCookies;
-  const cookies = process.env.instaCookies[randomIndex];
+  const cookies = global.allCookies[randomIndex];
   const headers = {
     authority: "www.instagram.com",
     method: "GET",
@@ -712,11 +708,14 @@ exports.searchToUsers22 = async (username) => {
     );
     const data = response.data;
     let urls = [];
-    if (data.data.user.bio_links.length != 0) {
-      data.data.user.bio_links.forEach((url) => {
-        // urls += url.url + "\n";
-        urls.push(url.url);
-      });
+
+    if (data.data.user.bio_links) {
+      if (data.data.user.bio_links.length != 0) {
+        data.data.user.bio_links.forEach((url) => {
+          // urls += url.url + "\n";
+          urls.push(url.url);
+        });
+      }
     }
 
     // const bio = data.data.user.biography + "\n" + urls;
