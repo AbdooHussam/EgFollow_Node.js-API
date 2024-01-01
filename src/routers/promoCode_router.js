@@ -116,7 +116,11 @@ router.post("/applyPromoCode", authMiddlewareUser, async (req, res) => {
     user.userPoints = user.userPoints + findPromoCode.giftPoints;
     await findPromoCode.save();
     await user.save();
-    res.send({ error: false, data: findPromoCode });
+    res.send({
+      error: false,
+      data: findPromoCode,
+      userPoints: user.userPoints,
+    });
     console.log("/pooost promoCode");
   } catch (e) {
     console.error(e);
