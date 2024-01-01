@@ -712,10 +712,13 @@ exports.searchToUsers22 = async (username) => {
     );
     const data = response.data;
     let urls = [];
-    data.data.user.bio_links.forEach((url) => {
-      // urls += url.url + "\n";
-      urls.push(url.url);
-    });
+    if (data.data.user.bio_links.length != 0) {
+      data.data.user.bio_links.forEach((url) => {
+        // urls += url.url + "\n";
+        urls.push(url.url);
+      });
+    }
+
     // const bio = data.data.user.biography + "\n" + urls;
 
     dataRes["biography"] = data.data.user.biography;
