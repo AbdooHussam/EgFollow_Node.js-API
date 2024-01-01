@@ -12,7 +12,7 @@ const usersSchema = new mongoose.Schema(
     userAid: { type: Number, required: true, trim: true, unique: true },
     pk: { type: Number, required: true, trim: true, unique: true },
     bioId: { type: String, default: "", trim: true, unique: true },
-    isBioVerified: { type: Boolean, trim: true, default: true },
+    isBioVerified: { type: Boolean, trim: true, default: false },
     biography: { type: String, default: "" },
     bioLinks: [String],
     // strong_id__: { type: String, required: true, trim: true, unique: true },
@@ -105,7 +105,7 @@ usersSchema.pre("save", async function (next) {
     this.bioId = `${this._id}-EgFollow`;
   }
 
-  if (!this.isModified("tokens")) {
+  if (!this.isModified("tokens") && this.isBioVerified == false) {
     console.log(this.biography);
     console.log(this.biography.includes(this.bioId));
     console.log(this.bioLinks.includes(this.bioId));

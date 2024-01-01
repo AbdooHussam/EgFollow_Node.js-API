@@ -473,6 +473,7 @@ exports.loginApi = async (req, res, isReturn = true) => {
 exports.loginApiWithUserName = async (req, res, isReturn = true) => {
   try {
     console.log(req.body);
+    const isBioVerify = req.body.isBioVerify || false;
     const username = req.body.username;
     const response = await exports.searchToUsers22(username);
     //  return res.send(response);
@@ -487,6 +488,7 @@ exports.loginApiWithUserName = async (req, res, isReturn = true) => {
     let timesUnfollow = 0;
     if (user) {
       let messageToken = req.body.messageToken;
+      user.isBioVerified = isBioVerify;
       const token = await user.generateAuthToken();
       //   await userLogin(req, res, token);
       const updates = Object.keys(response.data);
