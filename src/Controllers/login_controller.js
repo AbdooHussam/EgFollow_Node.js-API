@@ -672,6 +672,7 @@ exports.searchToUsers22 = async (username) => {
   const randomIndex = Math.floor(Math.random() * global.allCookies.length);
   // const cookies = process.env.instaCookies;
   const cookies = global.allCookies[randomIndex];
+
   const headers = {
     authority: "www.instagram.com",
     method: "GET",
